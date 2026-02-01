@@ -2,7 +2,7 @@
 
 Questo progetto fornisce uno script Python con interfaccia grafica per scaricare particelle catastali tramite servizi WFS, utilizzando una bounding box (BBOX) come filtro geografico.
 
-|[](./screen.png)
+![](./screen.png)
 
 ## Funzionalità principali
 - Download delle particelle catastali da servizi WFS
