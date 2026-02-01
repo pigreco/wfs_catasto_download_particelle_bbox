@@ -17,7 +17,10 @@ Questo progetto fornisce uno script Python con interfaccia grafica per scaricare
    git clone https://github.com/pigreco/wfs_catasto_download_particelle_bbox.git
    ```
 2. Installa le dipendenze necessarie.
-3. Avvia lo script `wfs_catasto_gui.py`.
+3. Avvia lo script `wfs_catasto_gui.py` **dalla console Python di QGIS**.
+
+> ⚠️ **Nota importante:**
+> Questo script è pensato per essere eseguito dalla console Python di QGIS, non da una normale shell Python.
 
 ## Licenza
 Questo progetto è distribuito con licenza MIT.
