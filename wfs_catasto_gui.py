@@ -219,9 +219,14 @@ def scarica_singolo_tile(min_lat, min_lon, max_lat, max_lon):
         return None, None
 
 
-def esegui_download_e_caricamento(min_lat, min_lon, max_lat, max_lon):
+def esegui_download_e_caricamento(min_lat, min_lon, max_lat, max_lon, filter_geom=None):
     """
     Gestisce il download WFS: singolo o multi-tile con progress bar.
+
+    Args:
+        min_lat, min_lon, max_lat, max_lon: Coordinate bbox in EPSG:6706
+        filter_geom: (opzionale) QgsGeometry in EPSG:6706 per filtrare le feature
+                     che intersecano questa geometria (es. buffer asse stradale)
     """
     area_km2 = stima_area_km2(min_lat, min_lon, max_lat, max_lon)
     print(f"\n[BBOX] Dimensione stimata: ~{area_km2:.1f} km²")
@@ -455,6 +460,32 @@ def esegui_download_e_caricamento(min_lat, min_lon, max_lat, max_lon):
     print(f"    Geometrie duplicate:            {duplicati_geom} (mantenute, segnalate)")
     print(f"    Feature finali:                 {len(dopo_dedup_id)}")
 
+    # --- FASE 3: Filtro spaziale (opzionale, per asse stradale) ---
+    filtrate_spaziale = 0
+    if filter_geom is not None:
+        print(f"\n--- Filtro spaziale (intersezione con buffer) ---")
+        features_filtrate = []
+        nuova_geom_dup_map = {}
+
+        for i, feat in enumerate(dopo_dedup_id):
+            geom = feat.geometry()
+            if geom.isNull() or geom.isEmpty():
+                continue
+            if geom.intersects(filter_geom):
+                nuovo_idx = len(features_filtrate)
+                features_filtrate.append(feat)
+                # Mantieni info duplicati con nuovo indice
+                if i in geom_dup_map:
+                    nuova_geom_dup_map[nuovo_idx] = geom_dup_map[i]
+
+        filtrate_spaziale = len(dopo_dedup_id) - len(features_filtrate)
+        print(f"    Feature nel bbox:              {len(dopo_dedup_id)}")
+        print(f"    Feature che intersecano buffer: {len(features_filtrate)}")
+        print(f"    Feature escluse:               {filtrate_spaziale}")
+
+        dopo_dedup_id = features_filtrate
+        geom_dup_map = nuova_geom_dup_map
+
     # Tutte le feature vengono mantenute
     unique_features = dopo_dedup_id
 
@@ -464,7 +495,13 @@ def esegui_download_e_caricamento(min_lat, min_lon, max_lat, max_lon):
     crs = layer_info["crs"]
     mem_uri = f"{geom_type_str}?crs={crs.authid()}"
 
-    mem_layer = QgsVectorLayer(mem_uri, "Particelle Catastali WFS", "memory")
+    # Nome layer descrittivo
+    if filter_geom is not None:
+        layer_name = "Particelle Catastali WFS (buffer asse)"
+    else:
+        layer_name = "Particelle Catastali WFS"
+
+    mem_layer = QgsVectorLayer(mem_uri, layer_name, "memory")
     mem_provider = mem_layer.dataProvider()
 
     # Copia campi originali + aggiungi campi segnalazione duplicati
@@ -540,6 +577,8 @@ def esegui_download_e_caricamento(min_lat, min_lon, max_lat, max_lon):
         print(f"  Geometrie duplicate:      {duplicati_geom} segnalate")
         print(f"  Gruppi duplicati:         {len(geom_duplicati_gruppi)}")
         print(f"  Filtra con: \"geom_duplicata\" = 'si'")
+    if filtrate_spaziale > 0:
+        print(f"  Filtro buffer:            {filtrate_spaziale} escluse (non intersecano)")
     print("=" * 60)
 
 
@@ -750,6 +789,201 @@ class PolySelectTool(QgsMapTool):
 
 
 # =============================================================================
+# TOOL 3: SELEZIONA ASSE STRADALE (linea + buffer)
+# =============================================================================
+
+# Distanza buffer in metri
+BUFFER_DISTANCE_M = 50
+
+class LineSelectTool(QgsMapTool):
+    """
+    Tool per selezionare un asse stradale (linea) sulla mappa.
+    Crea un buffer di 50m e scarica le particelle che intersecano il buffer.
+    """
+
+    def __init__(self, canvas):
+        super().__init__(canvas)
+        self.canvas = canvas
+        self.buffer_rb = None  # Rubberband per visualizzare il buffer
+
+    def _is_line_layer(self, layer):
+        """Verifica se il layer è lineare."""
+        try:
+            return layer.geometryType() == Qgis.GeometryType.Line
+        except AttributeError:
+            return layer.geometryType() == 1
+
+    def _visualizza_buffer(self, buffer_geom, buffer_crs):
+        """Visualizza il buffer sulla mappa."""
+        # Rimuovi eventuale rubberband precedente
+        if self.buffer_rb:
+            self.canvas.scene().removeItem(self.buffer_rb)
+            self.buffer_rb = None
+
+        # Trasforma nel CRS del progetto se necessario
+        project_crs = QgsProject.instance().crs()
+        if buffer_crs.authid() != project_crs.authid():
+            transform = QgsCoordinateTransform(
+                buffer_crs, project_crs, QgsProject.instance()
+            )
+            buffer_geom_proj = QgsGeometry(buffer_geom)
+            buffer_geom_proj.transform(transform)
+        else:
+            buffer_geom_proj = buffer_geom
+
+        # Crea rubberband arancione per il buffer
+        self.buffer_rb = QgsRubberBand(self.canvas, QgsWkbTypes.PolygonGeometry)
+        self.buffer_rb.setColor(QColor(255, 140, 0, 60))  # Arancione trasparente
+        self.buffer_rb.setStrokeColor(QColor(255, 100, 0, 200))
+        self.buffer_rb.setWidth(2)
+        self.buffer_rb.setToGeometry(buffer_geom_proj, None)
+        self.buffer_rb.show()
+
+    def canvasPressEvent(self, event):
+        click_map_point = self.toMapCoordinates(event.pos())
+        project_crs = QgsProject.instance().crs()
+
+        print(f"\n[DEBUG] Click alle coordinate progetto ({project_crs.authid()}): "
+              f"({click_map_point.x():.6f}, {click_map_point.y():.6f})")
+
+        # Trova layer lineari
+        line_layers = []
+        for lyr in QgsProject.instance().mapLayers().values():
+            if isinstance(lyr, QgsVectorLayer) and self._is_line_layer(lyr):
+                line_layers.append(lyr.name())
+        print(f"[DEBUG] Layer lineari trovati: {line_layers if line_layers else 'NESSUNO'}")
+
+        found = False
+        for layer in QgsProject.instance().mapLayers().values():
+            if not isinstance(layer, QgsVectorLayer):
+                continue
+            if not self._is_line_layer(layer):
+                continue
+
+            layer_crs = layer.crs()
+
+            # Trasforma punto click nel CRS del layer
+            if project_crs.authid() != layer_crs.authid():
+                to_layer = QgsCoordinateTransform(
+                    project_crs, layer_crs, QgsProject.instance()
+                )
+                click_layer_point = to_layer.transform(click_map_point)
+            else:
+                click_layer_point = click_map_point
+
+            # Crea area di ricerca
+            tolerance = self.canvas.mapUnitsPerPixel() * 15
+            if project_crs.authid() != layer_crs.authid():
+                tolerance_layer = tolerance * 2
+            else:
+                tolerance_layer = tolerance
+
+            search_rect = QgsRectangle(
+                click_layer_point.x() - tolerance_layer,
+                click_layer_point.y() - tolerance_layer,
+                click_layer_point.x() + tolerance_layer,
+                click_layer_point.y() + tolerance_layer,
+            )
+
+            request = QgsFeatureRequest().setFilterRect(search_rect)
+            click_geom = QgsGeometry.fromPointXY(click_layer_point)
+
+            # Trova la linea più vicina
+            min_distance = float('inf')
+            closest_feature = None
+            closest_layer = None
+
+            for feat in layer.getFeatures(request):
+                geom = feat.geometry()
+                if geom.isNull() or geom.isEmpty():
+                    continue
+                distance = geom.distance(click_geom)
+                if distance < min_distance:
+                    min_distance = distance
+                    closest_feature = feat
+                    closest_layer = layer
+
+            if closest_feature is not None and min_distance <= tolerance_layer:
+                found = True
+                layer_crs = closest_layer.crs()
+
+                # Controlla se il CRS è proiettato
+                if layer_crs.isGeographic():
+                    print(f"\n[ERRORE] Il layer '{closest_layer.name()}' usa un CRS geografico ({layer_crs.authid()}).")
+                    print(f"         Per calcolare correttamente il buffer di {BUFFER_DISTANCE_M}m,")
+                    print(f"         riproietta il layer in un CRS proiettato (es. EPSG:3857, UTM).")
+                    QMessageBox.warning(
+                        iface.mainWindow(),
+                        "CRS non valido",
+                        f"Il layer '{closest_layer.name()}' usa un CRS geografico ({layer_crs.authid()}).\n\n"
+                        f"Per calcolare correttamente il buffer di {BUFFER_DISTANCE_M}m, "
+                        f"riproietta il layer in un CRS proiettato (es. EPSG:3857, UTM).",
+                    )
+                    return
+
+                feat_id = closest_feature.id()
+                layer_name = closest_layer.name()
+
+                print(f"\n[ASSE STRADALE] Linea selezionata:")
+                print(f"                Layer: {layer_name}")
+                print(f"                Feature ID: {feat_id}")
+                print(f"                CRS del layer: {layer_crs.authid()}")
+
+                # Crea buffer di 50m
+                line_geom = closest_feature.geometry()
+                buffer_geom = line_geom.buffer(BUFFER_DISTANCE_M, 8)
+
+                print(f"[BUFFER] Creato buffer di {BUFFER_DISTANCE_M}m")
+                print(f"         Area buffer: ~{buffer_geom.area():.1f} m²")
+
+                # Visualizza il buffer sulla mappa
+                self._visualizza_buffer(buffer_geom, layer_crs)
+
+                # Estrai bbox dal buffer
+                bbox = buffer_geom.boundingBox()
+                print(f"[BUFFER] BBox del buffer ({layer_crs.authid()}):")
+                print(f"         xMin={bbox.xMinimum():.7f}, yMin={bbox.yMinimum():.7f}")
+                print(f"         xMax={bbox.xMaximum():.7f}, yMax={bbox.yMaximum():.7f}")
+
+                # Trasforma bbox e buffer per WFS
+                print(f"\n[CRS] CRS del layer sorgente: {layer_crs.authid()}")
+                min_lat, min_lon, max_lat, max_lon = trasforma_bbox_a_wfs(bbox, layer_crs)
+
+                # Trasforma il buffer nel CRS WFS per il filtering
+                wfs_crs = QgsCoordinateReferenceSystem(WFS_CRS_ID)
+                if layer_crs.authid() != wfs_crs.authid():
+                    transform_to_wfs = QgsCoordinateTransform(
+                        layer_crs, wfs_crs, QgsProject.instance()
+                    )
+                    buffer_geom_wfs = QgsGeometry(buffer_geom)
+                    buffer_geom_wfs.transform(transform_to_wfs)
+                else:
+                    buffer_geom_wfs = buffer_geom
+
+                # Esegui download con filtro buffer
+                esegui_download_e_caricamento(
+                    min_lat, min_lon, max_lat, max_lon,
+                    filter_geom=buffer_geom_wfs
+                )
+
+                iface.actionPan().trigger()
+                return
+
+        if not found:
+            print("[ASSE STRADALE] Nessuna linea trovata nel punto cliccato. Riprova.")
+
+    def deactivate(self):
+        # Rimuovi rubberband buffer
+        if self.buffer_rb:
+            try:
+                self.canvas.scene().removeItem(self.buffer_rb)
+            except Exception:
+                pass
+            self.buffer_rb = None
+        super().deactivate()
+
+
+# =============================================================================
 # GUI - DIALOGO SCELTA MODALITÀ
 # =============================================================================
 
@@ -842,6 +1076,36 @@ class SceltaModalitaDialog(QDialog):
         group2.setLayout(g2_layout)
         layout.addWidget(group2)
 
+        # --- Gruppo 3: Seleziona Asse Stradale ---
+        group3 = QGroupBox("Seleziona Asse Stradale")
+        group3.setStyleSheet(
+            "QGroupBox { font-weight: bold; border: 1px solid #ccc; "
+            "border-radius: 5px; margin-top: 10px; padding-top: 15px; }"
+            "QGroupBox::title { subcontrol-origin: margin; left: 10px; }"
+        )
+        g3_layout = QVBoxLayout()
+        desc3 = QLabel(
+            "Clicca su una linea (asse stradale) nella mappa.\n"
+            "Verrà creato un buffer di 50m e scaricate le\n"
+            "particelle che intersecano il buffer.\n\n"
+            "⚠ Il layer deve avere un CRS proiettato (metri)."
+        )
+        desc3.setWordWrap(True)
+        desc3.setStyleSheet("color: #333; font-weight: normal;")
+        g3_layout.addWidget(desc3)
+
+        btn_asse = QPushButton("  Seleziona Asse Stradale")
+        btn_asse.setMinimumHeight(40)
+        btn_asse.setStyleSheet(
+            "QPushButton { background-color: #FF6D00; color: white; "
+            "font-size: 12px; font-weight: bold; border: none; border-radius: 4px; }"
+            "QPushButton:hover { background-color: #E65100; }"
+        )
+        btn_asse.clicked.connect(self._on_asse)
+        g3_layout.addWidget(btn_asse)
+        group3.setLayout(g3_layout)
+        layout.addWidget(group3)
+
         # --- Pulsante annulla ---
         btn_annulla = QPushButton("Annulla")
         btn_annulla.setMinimumHeight(32)
@@ -861,6 +1125,10 @@ class SceltaModalitaDialog(QDialog):
 
     def _on_poligono(self):
         self.scelta = "poligono"
+        self.accept()
+
+    def _on_asse(self):
+        self.scelta = "asse"
         self.accept()
 
 
@@ -898,6 +1166,16 @@ def avvia():
         print("  >>> Il bbox verrà estratto e il CRS verificato")
         print("  >>> Il download partirà automaticamente\n")
         tool = PolySelectTool(canvas)
+        canvas.setMapTool(tool)
+        canvas._wfs_tool = tool
+
+    elif dlg.scelta == "asse":
+        print("\n  MODALITÀ: Seleziona Asse Stradale")
+        print("  >>> Clicca su una linea (asse stradale) nella mappa")
+        print("  >>> Verrà creato un buffer di 50m")
+        print("  >>> Verranno scaricate solo le particelle che intersecano il buffer")
+        print("  >>> ATTENZIONE: Il layer deve avere un CRS proiettato (metri)\n")
+        tool = LineSelectTool(canvas)
         canvas.setMapTool(tool)
         canvas._wfs_tool = tool
 
