@@ -61,7 +61,7 @@ WFS_BASE_URL = (
     "&typeNames=CP:CadastralParcel"
 )
 # Area massima per singola tile in km² (soglia sicurezza WFS)
-MAX_TILE_KM2 = 2.0
+MAX_TILE_KM2 = 4.0
 # Pausa tra le chiamate WFS in secondi
 PAUSA_SECONDI = 5
 

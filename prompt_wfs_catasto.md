@@ -130,7 +130,7 @@ Metti all'inizio del file come costanti modificabili:
 ```python
 WFS_CRS_ID = "EPSG:6706"
 WFS_BASE_URL = "https://wfs.cartografia.agenziaentrate.gov.it/inspire/wfs/owfs01.php?service=WFS&request=GetFeature&version=2.0.0&typeNames=CP:CadastralParcel"
-MAX_TILE_KM2 = 2.0
+MAX_TILE_KM2 = 4.0
 PAUSA_SECONDI = 5
 ```
 
