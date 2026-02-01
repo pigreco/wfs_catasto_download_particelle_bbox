@@ -30,7 +30,7 @@ Questo progetto è distribuito con licenza MIT.
 ---
 
 ## Ringraziamenti
-Un sentito grazie ad Andrea Borruso per l'idea e l'ispirazione.
+Un sentito grazie ad [Andrea Borruso](https://github.com/aborruso) per l'idea e l'ispirazione.
 
 ## Avviso
 Io non sono un developer, ma uso molto l'AI. Questo repository è interamente creato con l'aiuto di Claude AI.
