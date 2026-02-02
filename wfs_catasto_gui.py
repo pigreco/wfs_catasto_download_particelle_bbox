@@ -47,6 +47,7 @@ from qgis.PyQt.QtWidgets import (
     QMessageBox,
     QProgressDialog,
     QApplication,
+    QSpinBox,
 )
 from qgis.utils import iface
 
@@ -830,18 +831,19 @@ class PolySelectTool(QgsMapTool):
 # TOOL 3: SELEZIONA ASSE STRADALE (linea + buffer)
 # =============================================================================
 
-# Distanza buffer in metri
+# Distanza buffer in metri di default
 BUFFER_DISTANCE_M = 50
 
 class LineSelectTool(QgsMapTool):
     """
     Tool per selezionare un asse stradale (linea) sulla mappa.
-    Crea un buffer di 50m e scarica le particelle che intersecano il buffer.
+    Crea un buffer e scarica le particelle che intersecano il buffer.
     """
 
-    def __init__(self, canvas):
+    def __init__(self, canvas, buffer_distance=BUFFER_DISTANCE_M):
         super().__init__(canvas)
         self.canvas = canvas
+        self.buffer_distance = buffer_distance  # Distanza buffer in metri
         self.buffer_rb = None  # Rubberband per visualizzare il buffer
 
     def _is_line_layer(self, layer):
@@ -948,13 +950,13 @@ class LineSelectTool(QgsMapTool):
                 # Controlla se il CRS è proiettato
                 if layer_crs.isGeographic():
                     print(f"\n[ERRORE] Il layer '{closest_layer.name()}' usa un CRS geografico ({layer_crs.authid()}).")
-                    print(f"         Per calcolare correttamente il buffer di {BUFFER_DISTANCE_M}m,")
+                    print(f"         Per calcolare correttamente il buffer di {self.buffer_distance}m,")
                     print(f"         riproietta il layer in un CRS proiettato (es. EPSG:3857, UTM).")
                     QMessageBox.warning(
                         iface.mainWindow(),
                         "CRS non valido",
                         f"Il layer '{closest_layer.name()}' usa un CRS geografico ({layer_crs.authid()}).\n\n"
-                        f"Per calcolare correttamente il buffer di {BUFFER_DISTANCE_M}m, "
+                        f"Per calcolare correttamente il buffer di {self.buffer_distance}m, "
                         f"riproietta il layer in un CRS proiettato (es. EPSG:3857, UTM).",
                     )
                     return
@@ -967,11 +969,11 @@ class LineSelectTool(QgsMapTool):
                 print(f"                Feature ID: {feat_id}")
                 print(f"                CRS del layer: {layer_crs.authid()}")
 
-                # Crea buffer di 50m
+                # Crea buffer
                 line_geom = closest_feature.geometry()
-                buffer_geom = line_geom.buffer(BUFFER_DISTANCE_M, 8)
+                buffer_geom = line_geom.buffer(self.buffer_distance, 8)
 
-                print(f"[BUFFER] Creato buffer di {BUFFER_DISTANCE_M}m")
+                print(f"[BUFFER] Creato buffer di {self.buffer_distance}m")
                 print(f"         Area buffer: ~{buffer_geom.area():.1f} m²")
 
                 # Visualizza il buffer sulla mappa
@@ -1031,6 +1033,7 @@ class SceltaModalitaDialog(QDialog):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.scelta = None
+        self.buffer_distance = BUFFER_DISTANCE_M  # Valore di default
         self._init_ui()
 
     def _init_ui(self):
@@ -1124,13 +1127,32 @@ class SceltaModalitaDialog(QDialog):
         g3_layout = QVBoxLayout()
         desc3 = QLabel(
             "Clicca su una linea (asse stradale) nella mappa.\n"
-            "Verrà creato un buffer di 50m e scaricate le\n"
-            "particelle che intersecano il buffer.\n\n"
+            "Verrà creato un buffer e scaricate le particelle\n"
+            "che intersecano il buffer.\n\n"
             "⚠ Il layer deve avere un CRS proiettato (metri)."
         )
         desc3.setWordWrap(True)
         desc3.setStyleSheet("color: #333; font-weight: normal;")
         g3_layout.addWidget(desc3)
+
+        # --- Spinbox per valore buffer ---
+        buffer_layout = QHBoxLayout()
+        buffer_label = QLabel("Distanza buffer:")
+        buffer_label.setStyleSheet("color: #333; font-weight: normal;")
+        buffer_layout.addWidget(buffer_label)
+
+        self.buffer_spinbox = QSpinBox()
+        self.buffer_spinbox.setRange(0, 100)
+        self.buffer_spinbox.setValue(BUFFER_DISTANCE_M)
+        self.buffer_spinbox.setSuffix(" m")
+        self.buffer_spinbox.setMinimumWidth(80)
+        self.buffer_spinbox.setStyleSheet(
+            "QSpinBox { font-size: 12px; padding: 4px; }"
+        )
+        self.buffer_spinbox.valueChanged.connect(self._on_buffer_changed)
+        buffer_layout.addWidget(self.buffer_spinbox)
+        buffer_layout.addStretch()
+        g3_layout.addLayout(buffer_layout)
 
         btn_asse = QPushButton("  Seleziona Asse Stradale")
         btn_asse.setMinimumHeight(40)
@@ -1164,6 +1186,9 @@ class SceltaModalitaDialog(QDialog):
     def _on_poligono(self):
         self.scelta = "poligono"
         self.accept()
+
+    def _on_buffer_changed(self, value):
+        self.buffer_distance = value
 
     def _on_asse(self):
         self.scelta = "asse"
@@ -1208,12 +1233,13 @@ def avvia():
         canvas._wfs_tool = tool
 
     elif dlg.scelta == "asse":
+        buffer_m = dlg.buffer_distance
         print("\n  MODALITÀ: Seleziona Asse Stradale")
         print("  >>> Clicca su una linea (asse stradale) nella mappa")
-        print("  >>> Verrà creato un buffer di 50m")
+        print(f"  >>> Verrà creato un buffer di {buffer_m}m")
         print("  >>> Verranno scaricate solo le particelle che intersecano il buffer")
         print("  >>> ATTENZIONE: Il layer deve avere un CRS proiettato (metri)\n")
-        tool = LineSelectTool(canvas)
+        tool = LineSelectTool(canvas, buffer_distance=buffer_m)
         canvas.setMapTool(tool)
         canvas._wfs_tool = tool
 
