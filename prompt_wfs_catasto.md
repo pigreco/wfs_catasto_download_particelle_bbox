@@ -22,7 +22,7 @@ All'avvio mostra un `QDialog` con titolo "Download Particelle Catastali WFS" che
 
 1. **Disegna BBox** (pulsante blu) — l'utente disegna un rettangolo sulla mappa
 2. **Seleziona Poligono** (pulsante verde) — l'utente clicca su un poligono esistente
-3. **Seleziona Asse Stradale** (pulsante arancione) — l'utente clicca su una linea, viene creato un buffer di 50m e scaricate solo le particelle che intersecano il buffer
+3. **Seleziona Asse Stradale** (pulsante arancione) — l'utente clicca su una linea, viene creato un buffer e scaricate solo le particelle che intersecano il buffer. Include un `QSpinBox` per impostare la distanza del buffer (range 0-100m, default 50m).
 
 Il dialogo deve avere anche un pulsante "Annulla". Usa `QGroupBox` per raggruppare ogni modalità con una breve descrizione. Applica stili CSS ai pulsanti (colori, hover, border-radius).
 
@@ -57,7 +57,7 @@ Implementa un `QgsMapTool` personalizzato (`LineSelectTool`):
   - Se il CRS è geografico, mostra un `QMessageBox.warning` che spiega all'utente di riproiettare il layer in un CRS proiettato (es. EPSG:3857, UTM) per calcolare correttamente il buffer in metri.
   - Blocca l'operazione e non procedere con il download.
 - Trova la linea più vicina al punto cliccato usando `geom.distance(click_geom)`.
-- **Crea un buffer di 50m** sulla linea selezionata: `line_geom.buffer(BUFFER_DISTANCE_M, 8)` dove `BUFFER_DISTANCE_M = 50`.
+- **Crea un buffer** sulla linea selezionata: `line_geom.buffer(buffer_distance, 8)` dove `buffer_distance` è il valore scelto dall'utente nella GUI (default 50m, range 0-100m).
 - **Visualizza il buffer** sulla mappa con un `QgsRubberBand` arancione (fill: 255,140,0,60 — bordo: 255,100,0,200).
 - Estrai il bbox dal buffer e trasformalo in EPSG:6706 per la chiamata WFS.
 - **Trasforma anche la geometria del buffer** in EPSG:6706 per usarla come filtro spaziale.
@@ -164,7 +164,7 @@ WFS_CRS_ID = "EPSG:6706"
 WFS_BASE_URL = "https://wfs.cartografia.agenziaentrate.gov.it/inspire/wfs/owfs01.php?service=WFS&request=GetFeature&version=2.0.0&typeNames=CP:CadastralParcel"
 MAX_TILE_KM2 = 4.0
 PAUSA_SECONDI = 5
-BUFFER_DISTANCE_M = 50  # Distanza buffer in metri per modalità asse stradale
+BUFFER_DISTANCE_M = 50  # Distanza buffer di default (utente può scegliere 0-100m nella GUI)
 ```
 
 ## Struttura del codice
@@ -192,7 +192,7 @@ qgis.core: Qgis, QgsProject, QgsVectorLayer, QgsCoordinateReferenceSystem,
 qgis.gui: QgsMapTool, QgsRubberBand
 PyQt: Qt, QVariant, QTimer, QColor, QFont, QDialog, QVBoxLayout, QHBoxLayout,
       QLabel, QPushButton, QGroupBox, QSizePolicy, QMessageBox,
-      QProgressDialog, QApplication
+      QProgressDialog, QApplication, QSpinBox
 qgis.utils: iface
 ```
 
