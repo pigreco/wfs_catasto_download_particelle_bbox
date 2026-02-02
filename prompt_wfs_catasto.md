@@ -18,10 +18,11 @@ Formato bbox nella request: min_lat,min_lon,max_lat,max_lon,urn:ogc:def:crs:EPSG
 
 ## GUI - Dialogo scelta modalità
 
-All'avvio mostra un `QDialog` con titolo "Download Particelle Catastali WFS" che offre due modalità:
+All'avvio mostra un `QDialog` con titolo "Download Particelle Catastali WFS" che offre tre modalità:
 
 1. **Disegna BBox** (pulsante blu) — l'utente disegna un rettangolo sulla mappa
 2. **Seleziona Poligono** (pulsante verde) — l'utente clicca su un poligono esistente
+3. **Seleziona Asse Stradale** (pulsante arancione) — l'utente clicca su una linea, viene creato un buffer di 50m e scaricate solo le particelle che intersecano il buffer
 
 Il dialogo deve avere anche un pulsante "Annulla". Usa `QGroupBox` per raggruppare ogni modalità con una breve descrizione. Applica stili CSS ai pulsanti (colori, hover, border-radius).
 
@@ -46,6 +47,23 @@ Implementa un `QgsMapTool` personalizzato (`PolySelectTool`):
 - Trasforma il bbox dal CRS del layer a EPSG:6706 per la chiamata WFS.
 - Stampa nella console: layer name, feature ID, CRS del layer, bbox.
 
+## Modalità C — Seleziona Asse Stradale
+
+Implementa un `QgsMapTool` personalizzato (`LineSelectTool`):
+
+- Al click, itera tutti i layer lineari del progetto.
+- Per determinare se un layer è lineare, usa `Qgis.GeometryType.Line` con fallback al valore numerico `1` per compatibilità con versioni QGIS diverse.
+- **Controlla che il CRS del layer sia proiettato** (non geografico). Usa `layer.crs().isGeographic()`:
+  - Se il CRS è geografico, mostra un `QMessageBox.warning` che spiega all'utente di riproiettare il layer in un CRS proiettato (es. EPSG:3857, UTM) per calcolare correttamente il buffer in metri.
+  - Blocca l'operazione e non procedere con il download.
+- Trova la linea più vicina al punto cliccato usando `geom.distance(click_geom)`.
+- **Crea un buffer di 50m** sulla linea selezionata: `line_geom.buffer(BUFFER_DISTANCE_M, 8)` dove `BUFFER_DISTANCE_M = 50`.
+- **Visualizza il buffer** sulla mappa con un `QgsRubberBand` arancione (fill: 255,140,0,60 — bordo: 255,100,0,200).
+- Estrai il bbox dal buffer e trasformalo in EPSG:6706 per la chiamata WFS.
+- **Trasforma anche la geometria del buffer** in EPSG:6706 per usarla come filtro spaziale.
+- Passa il buffer trasformato come parametro `filter_geom` alla funzione `esegui_download_e_caricamento()`.
+- Stampa nella console: layer name, feature ID, CRS del layer, area del buffer, bbox.
+
 ## Trasformazione CRS
 
 Crea una funzione `trasforma_bbox_a_wfs(rect, source_crs)` che:
@@ -65,9 +83,10 @@ Il server WFS ha un limite di feature per chiamata. Per gestire aree grandi:
 
 ## Download con Progress Bar
 
-Crea una funzione `esegui_download_e_caricamento()` che:
+Crea una funzione `esegui_download_e_caricamento(min_lat, min_lon, max_lat, max_lon, filter_geom=None)` che:
 
 - Calcola la griglia tile.
+- **Ottimizzazione tile (se `filter_geom` è presente)**: prima di scaricare, filtra le tile che intersecano effettivamente il buffer. Per ogni tile, crea un `QgsGeometry.fromRect()` e verifica `tile_geom.intersects(filter_geom)`. Salta le tile che non intersecano. Stampa quante tile sono state saltate.
 - Mostra un `QProgressDialog` modale con pulsante "Annulla".
 - Per ogni tile:
   - Aggiorna la label della progress bar con: tile corrente, feature scaricate, errori.
@@ -93,9 +112,21 @@ Rimuovi le feature con lo stesso valore nel campo `gml_id` (oppure `inspireid` o
   - `gruppo_duplicato` (Int): numero progressivo del gruppo (stesso numero = stessa geometria), `NULL` se non è duplicata.
 - Stampa nella console un report dettagliato: numero di gruppi, e per i primi 10 gruppi mostra gli ID delle feature coinvolte e il bbox.
 
+### Fase 3 — Filtro spaziale (opzionale, per asse stradale)
+
+Se `filter_geom` è presente (modalità asse stradale):
+
+- Dopo la deduplicazione, filtra le feature che **intersecano** effettivamente il buffer usando `geom.intersects(filter_geom)`.
+- Mantieni la mappatura dei duplicati aggiornando gli indici.
+- Stampa nella console quante feature sono state escluse perché non intersecano il buffer.
+- Il layer finale conterrà **solo** le particelle che toccano il buffer dell'asse stradale.
+
 ## Creazione layer temporaneo in memoria
 
 - NON salvare nulla su disco. Crea un layer memory: `QgsVectorLayer("GeomType?crs=EPSG:...", "nome", "memory")`.
+- Nome del layer:
+  - `"Particelle Catastali WFS"` per le modalità BBox e Poligono
+  - `"Particelle Catastali WFS (buffer asse)"` per la modalità Asse Stradale
 - Copia i campi originali dal GML più i due campi aggiunti (`geom_duplicata`, `gruppo_duplicato`).
 - Copia le feature una per una impostando gli attributi originali e quelli di segnalazione.
 - Aggiungi il layer al progetto con `QgsProject.instance().addMapLayer()`.
@@ -116,12 +147,13 @@ Colori usati:
 - Anteprima disegno: blu tratteggiato (fill: 0,120,255,40 — bordo: 0,120,255,180)
 - BBox definitivo disegnato: rosso (fill: 255,50,50,50 — bordo: 255,0,0,220)
 - BBox poligono selezionato: verde (fill: 50,200,50,50 — bordo: 0,180,0,220)
+- Buffer asse stradale: arancione (fill: 255,140,0,60 — bordo: 255,100,0,200)
 
 ## Log nella console
 
-Ogni operazione significativa deve stampare informazioni nella console Python di QGIS con tag tra parentesi quadre: `[CRS]`, `[BBOX]`, `[BBOX WFS]`, `[TILING]`, `[WFS]`, `[POLIGONO]`, `[DEBUG]`, `[OK]`, `[ERRORE]`, `[AVVISO]`, `[INFO]`.
+Ogni operazione significativa deve stampare informazioni nella console Python di QGIS con tag tra parentesi quadre: `[CRS]`, `[BBOX]`, `[BBOX WFS]`, `[TILING]`, `[WFS]`, `[POLIGONO]`, `[ASSE STRADALE]`, `[BUFFER]`, `[OTTIMIZZAZIONE]`, `[DEBUG]`, `[OK]`, `[ERRORE]`, `[AVVISO]`, `[INFO]`.
 
-Il riepilogo finale deve mostrare: feature caricate, tile scaricati, tile con errori, duplicati per attributo rimossi, geometrie duplicate segnalate, numero di gruppi duplicati, e suggerire il filtro `"geom_duplicata" = 'si'`.
+Il riepilogo finale deve mostrare: feature caricate, tile scaricati, tile saltate (se ottimizzazione buffer attiva), tile con errori, duplicati per attributo rimossi, geometrie duplicate segnalate, numero di gruppi duplicati, feature escluse dal filtro buffer, e suggerire il filtro `"geom_duplicata" = 'si'`.
 
 ## Costanti di configurazione
 
@@ -132,6 +164,7 @@ WFS_CRS_ID = "EPSG:6706"
 WFS_BASE_URL = "https://wfs.cartografia.agenziaentrate.gov.it/inspire/wfs/owfs01.php?service=WFS&request=GetFeature&version=2.0.0&typeNames=CP:CadastralParcel"
 MAX_TILE_KM2 = 4.0
 PAUSA_SECONDI = 5
+BUFFER_DISTANCE_M = 50  # Distanza buffer in metri per modalità asse stradale
 ```
 
 ## Struttura del codice
@@ -143,8 +176,9 @@ Lo script deve essere un singolo file .py con questa struttura:
 3. Funzioni comuni: `pulisci_rubberband`, `disegna_rubberband_da_rect`, `trasforma_bbox_a_wfs`, `stima_area_km2`, `calcola_griglia_tile`, `scarica_singolo_tile`, `esegui_download_e_caricamento`
 4. Classe `BBoxDrawTool(QgsMapTool)` — disegno interattivo
 5. Classe `PolySelectTool(QgsMapTool)` — selezione poligono
-6. Classe `SceltaModalitaDialog(QDialog)` — GUI
-7. Funzione `avvia()` e chiamata `avvia()`
+6. Classe `LineSelectTool(QgsMapTool)` — selezione asse stradale con buffer
+7. Classe `SceltaModalitaDialog(QDialog)` — GUI
+8. Funzione `avvia()` e chiamata `avvia()`
 
 ## Import necessari
 
@@ -166,5 +200,7 @@ qgis.utils: iface
 
 - Lo script viene eseguito nella Console Python di QGIS, non come plugin.
 - Non salvare file su disco: tutto in memoria (layer memory + tempfile per il download GML che viene cancellato subito dopo).
-- Compatibilità: `geometryType()` può restituire `Qgis.GeometryType.Polygon` oppure il valore numerico `2` a seconda della versione di QGIS. Gestisci entrambi i casi.
+- Compatibilità: `geometryType()` può restituire `Qgis.GeometryType.Polygon`/`Line` oppure i valori numerici `2`/`1` a seconda della versione di QGIS. Gestisci entrambi i casi.
+- **Modalità Asse Stradale**: il layer lineare deve avere un CRS proiettato (metri) per calcolare correttamente il buffer. Se il CRS è geografico (gradi), mostra un errore e blocca l'operazione.
+- **Ottimizzazione tile**: quando si usa il buffer, scarica solo le tile che intersecano effettivamente il buffer, non tutte quelle del bbox rettangolare. Questo riduce significativamente il tempo di download per assi obliqui o curvi.
 - Commenta il codice in italiano.

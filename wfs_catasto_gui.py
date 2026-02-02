@@ -233,6 +233,30 @@ def esegui_download_e_caricamento(min_lat, min_lon, max_lat, max_lon, filter_geo
 
     # --- Calcola griglia tile ---
     tiles = calcola_griglia_tile(min_lat, min_lon, max_lat, max_lon, MAX_TILE_KM2)
+    n_tiles_totali = len(tiles)
+
+    # --- Filtra tile che intersecano il buffer (ottimizzazione per asse stradale) ---
+    tiles_saltate = 0
+    if filter_geom is not None and n_tiles_totali > 1:
+        tiles_filtrate = []
+        for tile in tiles:
+            t_min_lat, t_min_lon, t_max_lat, t_max_lon = tile
+            # Crea geometria rettangolare della tile (in coordinate WFS/EPSG:6706)
+            tile_rect = QgsRectangle(t_min_lon, t_min_lat, t_max_lon, t_max_lat)
+            tile_geom = QgsGeometry.fromRect(tile_rect)
+            # Verifica intersezione con il buffer
+            if tile_geom.intersects(filter_geom):
+                tiles_filtrate.append(tile)
+            else:
+                tiles_saltate += 1
+
+        if tiles_saltate > 0:
+            print(f"\n[OTTIMIZZAZIONE] Tile nel bbox totale: {n_tiles_totali}")
+            print(f"[OTTIMIZZAZIONE] Tile che intersecano il buffer: {len(tiles_filtrate)}")
+            print(f"[OTTIMIZZAZIONE] Tile saltate: {tiles_saltate}")
+
+        tiles = tiles_filtrate
+
     n_tiles = len(tiles)
 
     if n_tiles > 1:
@@ -241,13 +265,25 @@ def esegui_download_e_caricamento(min_lat, min_lon, max_lat, max_lon, filter_geo
         minuti = tempo_stimato // 60
         secondi = tempo_stimato % 60
         tempo_str = f"{minuti} min {secondi} sec" if minuti > 0 else f"{secondi} sec"
-        msg = (
-            f"L'area selezionata (~{area_km2:.1f} km²) verrà suddivisa\n"
-            f"in {n_tiles} tile per rispettare i limiti del server WFS.\n\n"
-            f"Tempo stimato: ~{tempo_str}\n"
-            f"(pausa di {PAUSA_SECONDI} sec tra ogni chiamata)\n\n"
-            f"Vuoi procedere?"
-        )
+
+        # Messaggio diverso se ci sono tile saltate (ottimizzazione buffer)
+        if tiles_saltate > 0:
+            msg = (
+                f"L'area selezionata (~{area_km2:.1f} km²) richiede {n_tiles_totali} tile,\n"
+                f"ma solo {n_tiles} intersecano il buffer dell'asse stradale.\n\n"
+                f"Tile da scaricare: {n_tiles} (saltate: {tiles_saltate})\n"
+                f"Tempo stimato: ~{tempo_str}\n"
+                f"(pausa di {PAUSA_SECONDI} sec tra ogni chiamata)\n\n"
+                f"Vuoi procedere?"
+            )
+        else:
+            msg = (
+                f"L'area selezionata (~{area_km2:.1f} km²) verrà suddivisa\n"
+                f"in {n_tiles} tile per rispettare i limiti del server WFS.\n\n"
+                f"Tempo stimato: ~{tempo_str}\n"
+                f"(pausa di {PAUSA_SECONDI} sec tra ogni chiamata)\n\n"
+                f"Vuoi procedere?"
+            )
         risposta = QMessageBox.question(
             iface.mainWindow(),
             f"Download multi-tile ({n_tiles} tile)",
@@ -569,6 +605,8 @@ def esegui_download_e_caricamento(min_lat, min_lon, max_lat, max_lon, filter_geo
     print("  COMPLETATO!")
     print(f"  Feature caricate:         {feat_count}")
     print(f"  Tile scaricati:           {n_tiles - errori}/{n_tiles}")
+    if tiles_saltate > 0:
+        print(f"  Tile saltate (no inters.): {tiles_saltate}")
     if errori > 0:
         print(f"  Tile con errori:          {errori}")
     if duplicati_id > 0:
