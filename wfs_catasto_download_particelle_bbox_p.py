@@ -91,6 +91,17 @@ def _is_line_layer(layer):
         return layer.geometryType() == 1
 
 
+# Qt enum scoped (Qt6) vs flat (Qt5)
+try:
+    _WindowModal = Qt.WindowModality.WindowModal
+    _DashLine = Qt.PenStyle.DashLine
+    _DialogAccepted = QDialog.DialogCode.Accepted
+except AttributeError:
+    _WindowModal = Qt.WindowModal
+    _DashLine = Qt.DashLine
+    _DialogAccepted = QDialog.Accepted
+
+
 # =============================================================================
 # CONFIGURAZIONE
 # =============================================================================
@@ -350,7 +361,7 @@ def esegui_download_e_caricamento(min_lat, min_lon, max_lat, max_lon, filter_geo
         qgis_iface.mainWindow(),
     )
     progress.setWindowTitle("WFS Catasto - Download")
-    progress.setWindowModality(Qt.WindowModal)
+    progress.setWindowModality(_WindowModal)
     progress.setMinimumDuration(0)
     progress.setAutoClose(False)
     progress.setAutoReset(False)
@@ -683,7 +694,7 @@ class BBoxDrawTool(QgsMapTool):
         self.preview_rb.setColor(QColor(0, 120, 255, 40))
         self.preview_rb.setStrokeColor(QColor(0, 120, 255, 180))
         self.preview_rb.setWidth(2)
-        self.preview_rb.setLineStyle(Qt.DashLine)
+        self.preview_rb.setLineStyle(_DashLine)
 
     def _update_preview(self, second_point):
         if not self.first_point:
@@ -1170,7 +1181,7 @@ class WfsCatastoDownloadParticelleBbox:
         if not self._avviso_accettato:
             avviso = AvvisoDialog(self.iface.mainWindow())
             result_avviso = _exec_dialog(avviso)
-            if result_avviso != QDialog.Accepted:
+            if result_avviso != _DialogAccepted:
                 print("[INFO] Avviso non accettato. Plugin non avviato.")
                 return
             self._avviso_accettato = True

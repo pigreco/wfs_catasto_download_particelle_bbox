@@ -28,6 +28,9 @@ tags=catasto, wfs, particelle, bbox, agenzia entrate, cadastral, inspire, buffer
 homepage=https://github.com/pigreco/wfs_catasto_download_particelle_bbox
 category=Vector
 icon=icon.png
+# Qt6 support (QGIS 4)
+supportsQt6=yes
+
 # experimental flag
 experimental=False
 

@@ -21,6 +21,20 @@ from qgis.PyQt.QtWidgets import (
     QWidget,
 )
 
+# Compatibilità Qt5 / Qt6 - enum scoped
+try:
+    _WinHelpHint = Qt.WindowType.WindowContextHelpButtonHint
+    _WinCloseHint = Qt.WindowType.WindowCloseButtonHint
+    _WinStaysOnTop = Qt.WindowType.WindowStaysOnTopHint
+    _AlignCenter = Qt.AlignmentFlag.AlignCenter
+    _RichText = Qt.TextFormat.RichText
+except AttributeError:
+    _WinHelpHint = Qt.WindowContextHelpButtonHint
+    _WinCloseHint = Qt.WindowCloseButtonHint
+    _WinStaysOnTop = Qt.WindowStaysOnTopHint
+    _AlignCenter = Qt.AlignCenter
+    _RichText = Qt.RichText
+
 
 class AvvisoDialog(QDialog):
     """Finestra di avviso sull'uso responsabile del plugin (una volta per sessione QGIS)."""
@@ -34,8 +48,8 @@ class AvvisoDialog(QDialog):
         self.setMinimumSize(550, 480)
         self.setWindowFlags(
             self.windowFlags()
-            & ~Qt.WindowContextHelpButtonHint
-            & ~Qt.WindowCloseButtonHint
+            & ~_WinHelpHint
+            & ~_WinCloseHint
         )
 
         layout = QVBoxLayout()
@@ -48,7 +62,7 @@ class AvvisoDialog(QDialog):
         font_titolo.setPointSize(16)
         font_titolo.setBold(True)
         titolo.setFont(font_titolo)
-        titolo.setAlignment(Qt.AlignCenter)
+        titolo.setAlignment(_AlignCenter)
         titolo.setStyleSheet("color: #D32F2F;")
         layout.addWidget(titolo)
 
@@ -81,11 +95,9 @@ class AvvisoDialog(QDialog):
             "utilizzo non conforme alle condizioni del servizio WFS "
             "dell'Agenzia delle Entrate."
         )
-        testo_avviso.setTextFormat(Qt.RichText)
+        testo_avviso.setTextFormat(_RichText)
         testo_avviso.setWordWrap(True)
-        testo_avviso.setStyleSheet(
-            "color: #333; font-size: 12px;"
-        )
+        testo_avviso.setStyleSheet("font-size: 12px;")
         scroll_layout.addWidget(testo_avviso)
         scroll.setWidget(scroll_content)
         layout.addWidget(scroll)
@@ -96,7 +108,7 @@ class AvvisoDialog(QDialog):
             "il plugin in modo responsabile e moderato."
         )
         self.check_accetto.setStyleSheet(
-            "QCheckBox { font-size: 11px; font-weight: bold; color: #333; }"
+            "QCheckBox { font-size: 11px; font-weight: bold; }"
             "QCheckBox::indicator { width: 18px; height: 18px; }"
         )
         self.check_accetto.toggled.connect(self._on_check_toggled)
@@ -151,8 +163,8 @@ class SceltaModalitaDialog(QDialog):
         self.setMinimumWidth(400)
         self.setWindowFlags(
             self.windowFlags()
-            & ~Qt.WindowContextHelpButtonHint
-            | Qt.WindowStaysOnTopHint
+            & ~_WinHelpHint
+            | _WinStaysOnTop
         )
 
         layout = QVBoxLayout()
@@ -165,15 +177,14 @@ class SceltaModalitaDialog(QDialog):
         font_titolo.setPointSize(13)
         font_titolo.setBold(True)
         titolo.setFont(font_titolo)
-        titolo.setAlignment(Qt.AlignCenter)
+        titolo.setAlignment(_AlignCenter)
         layout.addWidget(titolo)
 
         # Sottotitolo
         sottotitolo = QLabel(
             "Seleziona la modalità per definire l'area di interesse:"
         )
-        sottotitolo.setAlignment(Qt.AlignCenter)
-        sottotitolo.setStyleSheet("color: #555;")
+        sottotitolo.setAlignment(_AlignCenter)
         layout.addWidget(sottotitolo)
 
         # --- Gruppo 1: Disegna BBox ---
@@ -189,7 +200,7 @@ class SceltaModalitaDialog(QDialog):
             "un rettangolo che definisce l'area di download."
         )
         desc1.setWordWrap(True)
-        desc1.setStyleSheet("color: #333; font-weight: normal;")
+        desc1.setStyleSheet("font-weight: normal;")
         g1_layout.addWidget(desc1)
 
         btn_disegna = QPushButton("  Disegna BBox sulla mappa")
@@ -219,7 +230,7 @@ class SceltaModalitaDialog(QDialog):
             "Se l'area è grande, verrà suddivisa in tile automaticamente."
         )
         desc2.setWordWrap(True)
-        desc2.setStyleSheet("color: #333; font-weight: normal;")
+        desc2.setStyleSheet("font-weight: normal;")
         g2_layout.addWidget(desc2)
 
         btn_poligono = QPushButton("  Seleziona Poligono sulla mappa")
@@ -250,20 +261,21 @@ class SceltaModalitaDialog(QDialog):
             "\u26a0 Il layer deve avere un CRS proiettato (metri)."
         )
         desc3.setWordWrap(True)
-        desc3.setStyleSheet("color: #333; font-weight: normal;")
+        desc3.setStyleSheet("font-weight: normal;")
         g3_layout.addWidget(desc3)
 
         # Spinbox per valore buffer
         buffer_layout = QHBoxLayout()
         buffer_label = QLabel("Distanza buffer (0-100m):")
-        buffer_label.setStyleSheet("color: #333; font-weight: normal;")
+        buffer_label.setStyleSheet("font-weight: normal;")
         buffer_layout.addWidget(buffer_label)
 
         self.buffer_spinbox = QSpinBox()
         self.buffer_spinbox.setRange(0, 100)
         self.buffer_spinbox.setValue(self._default_buffer_m)
         self.buffer_spinbox.setSuffix(" m")
-        self.buffer_spinbox.setMinimumWidth(80)
+        self.buffer_spinbox.setMinimumWidth(100)
+        self.buffer_spinbox.setMinimumHeight(32)
         self.buffer_spinbox.setStyleSheet(
             "QSpinBox { font-size: 12px; padding: 4px; }"
         )
