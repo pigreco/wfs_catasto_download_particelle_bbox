@@ -1,0 +1,43 @@
+# This file contains metadata for your plugin.
+
+# This file should be included when you package your plugin.# Mandatory items:
+
+[general]
+name=WFS Catasto Download Particelle BBox
+qgisMinimumVersion=3.0
+description=Download particelle catastali dal WFS dell'Agenzia delle Entrate tramite BBox interattivo, selezione poligono o linea con buffer.
+version=1.0.0
+author=Salvatore Fiandaca
+email=pigrecoinfinito@gmail.com
+
+about= <b>WFS Catasto Download Particelle BBox</b> è un plugin per QGIS che consente di scaricare le particelle catastali dal servizio WFS dell'Agenzia delle Entrate (INSPIRE). Tre modalità di selezione dell'area di interesse: <br><br> 1) <b>Disegna BBox</b>: clicca due punti sulla mappa per disegnare un rettangolo di download.<br> 2) <b>Seleziona Poligono</b>: clicca su un poligono esistente per estrarne il bounding box.<br> 3) <b>Seleziona Linea</b>: clicca su una linea e crea un buffer personalizzabile (0-100m) per scaricare le particelle che lo intersecano.<br><br> <b>⚠ AVVISO IMPORTANTE:</b> Si raccomanda un uso responsabile e moderato del plugin. Il download massivo o ripetuto di grandi quantità di dati potrebbe compromettere la disponibilità del servizio WFS dell'Agenzia delle Entrate, arrecando disservizio a tutti gli utenti. L'autore invita al rispetto dell'etica professionale e delle buone pratiche nell'utilizzo delle risorse pubbliche condivise: il servizio WFS è messo a disposizione dalla pubblica amministrazione per finalità istituzionali e professionali, non per lo scaricamento indiscriminato dei dati.<br><br> Supporta download multi-tile con progress bar, deduplicazione feature e filtro spaziale. Compatibile con QGIS 3 (Qt5) e QGIS 4 (Qt6).<br><br> EN: A QGIS plugin for downloading cadastral parcels from the Italian Revenue Agency (Agenzia delle Entrate) WFS INSPIRE service. Three selection modes: draw BBox, select polygon, select line with customizable buffer (0-100m). Supports multi-tile download with progress bar, feature deduplication and spatial filtering.<br><br> <b>⚠ DISCLAIMER:</b> Please use this plugin responsibly. Massive or repeated downloads may overload the WFS service of the Italian Revenue Agency, causing disruptions for all users. The author encourages professional ethics and responsible use of shared public resources.
+
+tracker=https://github.com/pigreco/wfs_catasto_download_particelle_bbox/issues
+repository=https://github.com/pigreco/wfs_catasto_download_particelle_bbox
+# End of mandatory metadata
+
+# Recommended items:
+
+hasProcessingProvider=no
+# Uncomment the following line and add your changelog:
+# changelog=
+
+# Tags are comma separated with spaces allowed
+tags=catasto, wfs, particelle, bbox, agenzia entrate, cadastral, inspire, buffer, download
+
+homepage=https://github.com/pigreco/wfs_catasto_download_particelle_bbox
+category=Vector
+icon=icon.png
+# experimental flag
+experimental=False
+
+# deprecated flag (applies to the whole plugin, not just a single version)
+deprecated=False
+
+# Since QGIS 3.8, a comma separated list of plugins to be installed
+# (or upgraded) can be specified.
+# Check the documentation for more information.
+# plugin_dependencies=
+
+# If the plugin can run on QGIS Server.
+server=False

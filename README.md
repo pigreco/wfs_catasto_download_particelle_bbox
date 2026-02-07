@@ -1,36 +1,68 @@
-# wfs_catasto_download_particelle_bbox
+# WFS Catasto Download Particelle BBox
 
-Questo progetto fornisce uno script Python con interfaccia grafica per scaricare particelle catastali tramite servizi WFS, utilizzando una bounding box (BBOX) come filtro geografico.
+Plugin per QGIS che consente di scaricare le particelle catastali dal servizio WFS dell'Agenzia delle Entrate (INSPIRE).
 
-![](./screen.png)
+![Panoramica del plugin in QGIS](./screen.png)
 
-## Funzionalità principali
-- Download delle particelle catastali da servizi WFS
-- Selezione dell'area di interesse tramite BBOX
-- Interfaccia grafica semplice e intuitiva
+## Funzionalità
 
-## Requisiti
-- Python 3.x
-- Librerie: PyQt5, requests, xml, ecc. (vedi codice per dettagli)
+Tre modalità di selezione dell'area di interesse:
 
-## Utilizzo
-1. Clona il repository:
-   ```bash
-   git clone https://github.com/pigreco/wfs_catasto_download_particelle_bbox.git
-   ```
-2. Installa le dipendenze necessarie.
-3. Avvia lo script `wfs_catasto_gui.py` **dalla console Python di QGIS**.
+1. **Disegna BBox** - Clicca due punti sulla mappa per disegnare un rettangolo che definisce l'area di download.
+2. **Seleziona Poligono** - Clicca su un poligono esistente in mappa per estrarne automaticamente il bounding box. Se l'area è grande, viene suddivisa in tile automaticamente.
+3. **Seleziona Linea** - Clicca su una linea nella mappa e crea un buffer personalizzabile (0-100m) per scaricare le particelle che lo intersecano. Il layer deve avere un CRS proiettato (metri).
 
-> ⚠️ **Nota importante:**
-> Questo script è pensato per essere eseguito dalla console Python di QGIS, non da una normale shell Python.
+### Caratteristiche tecniche
+
+- Download multi-tile con progress bar per aree estese
+- Deduplicazione automatica delle feature
+- Filtro spaziale per la modalità linea con buffer
+- Compatibile con QGIS 3 (Qt5) e QGIS 4 (Qt6)
+
+## Interfaccia
+
+Al primo avvio per sessione QGIS viene mostrato un avviso obbligatorio sull'uso responsabile del plugin. Dopo l'accettazione si accede alla finestra di scelta modalità, che resta in primo piano permettendo di navigare la mappa prima di selezionare la modalità.
+
+![Finestra di avviso e scelta modalità](./screen2.png)
+
+## Installazione
+
+### Da cartella plugin
+
+1. Copia la cartella `wfs_catasto_download_particelle_bbox` nella directory dei plugin di QGIS:
+   - **Windows**: `%APPDATA%\QGIS\QGIS3\profiles\default\python\plugins\`
+   - **Linux**: `~/.local/share/QGIS/QGIS3/profiles/default/python/plugins/`
+   - **macOS**: `~/Library/Application Support/QGIS/QGIS3/profiles/default/python/plugins/`
+2. Riavvia QGIS.
+3. Attiva il plugin dal menu **Plugin > Gestisci e installa plugin**.
+
+### Da repository GitHub
+
+```bash
+cd <cartella_plugin_qgis>
+git clone https://github.com/pigreco/wfs_catasto_download_particelle_bbox.git
+```
+
+## Avviso importante
+
+Si raccomanda un uso **responsabile** e **moderato** del plugin. Il download massivo o ripetuto di grandi quantità di dati potrebbe compromettere la disponibilità del servizio WFS dell'Agenzia delle Entrate, arrecando disservizio a tutti gli utenti.
+
+L'autore invita al rispetto dell'**etica professionale** e delle buone pratiche nell'utilizzo delle risorse pubbliche condivise: il servizio WFS è messo a disposizione dalla pubblica amministrazione per finalità istituzionali e professionali, non per lo scaricamento indiscriminato dei dati.
+
+L'autore declina ogni responsabilità per eventuali usi impropri del plugin o per conseguenze derivanti da un utilizzo non conforme alle condizioni del servizio WFS dell'Agenzia delle Entrate.
 
 ## Licenza
+
 Questo progetto è distribuito con licenza MIT.
+
+## Ringraziamenti
+
+Un sentito grazie ad [Andrea Borruso](https://github.com/aborruso) per l'idea e l'ispirazione.
 
 ---
 
-## Ringraziamenti
-Un sentito grazie ad [Andrea Borruso](https://github.com/aborruso) per l'idea e l'ispirazione.
+> Questo repository è interamente creato con l'aiuto di [Claude Code](https://claude.ai/claude-code).
 
-## Avviso
-Io non sono un developer, ma uso molto l'AI. Questo repository è interamente creato con l'aiuto di Claude AI.
+## Autore
+
+**Salvatore Fiandaca** - [pigrecoinfinito@gmail.com](mailto:pigrecoinfinito@gmail.com)

@@ -1,0 +1,4 @@
+__pycache__/
+.claude/
+prompt_wfs_catasto.md
+wfs_catasto_gui.py
