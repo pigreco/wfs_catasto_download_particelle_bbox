@@ -234,13 +234,15 @@ def scarica_singolo_tile(min_lat, min_lon, max_lat, max_lon):
         tmp_path = tmp_file.name
         tmp_file.close()
 
-        urllib.request.urlretrieve(wfs_url, tmp_path)
+        if not wfs_url.startswith("https://"):
+            raise ValueError(f"Schema URL non permesso: {wfs_url}")
+        urllib.request.urlretrieve(wfs_url, tmp_path)  # noqa: S310
 
         # Verifica errori nel contenuto
         with open(tmp_path, 'r', encoding='utf-8', errors='replace') as f:
             contenuto = f.read(2048)
         if '<ExceptionReport' in contenuto or '<ows:ExceptionReport' in contenuto:
-            print(f"  [ERRORE] Il server ha restituito un errore per questo tile")
+            print("  [ERRORE] Il server ha restituito un errore per questo tile")
             os.remove(tmp_path)
             return None, None
 
@@ -402,7 +404,7 @@ def esegui_download_e_caricamento(min_lat, min_lon, max_lat, max_lon, filter_geo
                 layer_info = info
         else:
             errori += 1
-            print(f"    [ERRORE] Tile fallito")
+            print("    [ERRORE] Tile fallito")
 
         # Pausa tra le chiamate (non dopo l'ultimo tile)
         if i < n_tiles - 1 and not progress.wasCanceled():
@@ -458,7 +460,7 @@ def esegui_download_e_caricamento(min_lat, min_lon, max_lat, max_lon, filter_geo
         return
 
     # --- Deduplicazione feature ---
-    print(f"\n--- Deduplicazione ---")
+    print("\n--- Deduplicazione ---")
     print(f"    Feature totali scaricate: {len(all_features)}")
 
     # FASE 1: Deduplicazione per attributo (gml_id, inspireid, ecc.)
@@ -484,17 +486,17 @@ def esegui_download_e_caricamento(min_lat, min_lon, max_lat, max_lon, filter_geo
             else:
                 duplicati_id += 1
     else:
-        print(f"    [AVVISO] Nessun campo ID trovato, salto dedup per attributo")
+        print("    [AVVISO] Nessun campo ID trovato, salto dedup per attributo")
         dopo_dedup_id = list(all_features)
 
     if duplicati_id > 0:
         print(f"    Duplicati per attributo rimossi: {duplicati_id}")
     else:
-        print(f"    Nessun duplicato per attributo")
+        print("    Nessun duplicato per attributo")
 
     # FASE 2: Verifica geometrie duplicate (stessa geometria, ID diverso)
     # Le feature vengono MANTENUTE tutte, ma segnalate con un campo attributo
-    print(f"\n--- Verifica geometrie duplicate ---")
+    print("\n--- Verifica geometrie duplicate ---")
     seen_geom = {}  # wkt -> lista di indici in dopo_dedup_id
 
     for i, feat in enumerate(dopo_dedup_id):
@@ -542,10 +544,10 @@ def esegui_download_e_caricamento(min_lat, min_lon, max_lat, max_lon, filter_geo
         if len(geom_duplicati_gruppi) > 10:
             print(f"      ... e altri {len(geom_duplicati_gruppi) - 10} gruppi")
     else:
-        print(f"    Nessuna geometria duplicata trovata")
+        print("    Nessuna geometria duplicata trovata")
 
     # Riepilogo deduplicazione
-    print(f"\n    --- Riepilogo ---")
+    print("\n    --- Riepilogo ---")
     print(f"    Feature iniziali:              {len(all_features)}")
     print(f"    Duplicati per attributo:        {duplicati_id} (rimossi)")
     print(f"    Geometrie duplicate:            {duplicati_geom} (mantenute, segnalate)")
@@ -554,7 +556,7 @@ def esegui_download_e_caricamento(min_lat, min_lon, max_lat, max_lon, filter_geo
     # --- FASE 3: Filtro spaziale (opzionale, per asse stradale) ---
     filtrate_spaziale = 0
     if filter_geom is not None:
-        print(f"\n--- Filtro spaziale (intersezione con buffer) ---")
+        print("\n--- Filtro spaziale (intersezione con buffer) ---")
         features_filtrate = []
         nuova_geom_dup_map = {}
 
@@ -581,7 +583,7 @@ def esegui_download_e_caricamento(min_lat, min_lon, max_lat, max_lon, filter_geo
     unique_features = dopo_dedup_id
 
     # --- Crea layer temporaneo in memoria ---
-    print(f"\n--- Creazione layer temporaneo ---")
+    print("\n--- Creazione layer temporaneo ---")
     timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
     layer_name = f"{layer_name}_{timestamp}"
     geom_type_str = _wkb_display_string(layer_info["wkb_type"])
@@ -632,7 +634,7 @@ def esegui_download_e_caricamento(min_lat, min_lon, max_lat, max_lon, filter_geo
     print(f"[OK] Layer temporaneo caricato con {feat_count} feature(s)")
     print(f"     CRS: {crs.authid()}")
     print(f"     Geometria: {geom_type_str}")
-    print(f"     Campi aggiunti: 'geom_duplicata' (si/no), 'gruppo_duplicato' (n. gruppo)")
+    print("     Campi aggiunti: 'geom_duplicata' (si/no), 'gruppo_duplicato' (n. gruppo)")
 
     # Zoom sul layer (trasforma extent nel CRS del progetto)
     canvas = qgis_iface.mapCanvas()
@@ -665,7 +667,7 @@ def esegui_download_e_caricamento(min_lat, min_lon, max_lat, max_lon, filter_geo
     if duplicati_geom > 0:
         print(f"  Geometrie duplicate:      {duplicati_geom} segnalate")
         print(f"  Gruppi duplicati:         {len(geom_duplicati_gruppi)}")
-        print(f"  Filtra con: \"geom_duplicata\" = 'si'")
+        print("  Filtra con: \"geom_duplicata\" = 'si'")
     if filtrate_spaziale > 0:
         print(f"  Filtro buffer:            {filtrate_spaziale} escluse (non intersecano)")
     print("=" * 60)
@@ -833,7 +835,7 @@ class PolySelectTool(QgsMapTool):
                 feat_id = feat.id()
                 layer_name = layer.name()
 
-                print(f"\n[POLIGONO] Feature selezionata:")
+                print("\n[POLIGONO] Feature selezionata:")
                 print(f"           Layer: {layer_name}")
                 print(f"           Feature ID: {feat_id}")
                 print(f"           CRS del layer: {layer_crs.authid()}")
@@ -842,14 +844,6 @@ class PolySelectTool(QgsMapTool):
                 print(f"[POLIGONO] BBox geometria ({layer_crs.authid()}):")
                 print(f"           xMin={bbox.xMinimum():.7f}, yMin={bbox.yMinimum():.7f}")
                 print(f"           xMax={bbox.xMaximum():.7f}, yMax={bbox.yMaximum():.7f}")
-
-                if layer_crs.authid() != project_crs.authid():
-                    to_project = QgsCoordinateTransform(
-                        layer_crs, project_crs, QgsProject.instance()
-                    )
-                    bbox_proj = to_project.transformBoundingBox(bbox)
-                else:
-                    bbox_proj = bbox
 
                 print(f"\n[CRS] CRS del layer sorgente: {layer_crs.authid()}")
                 min_lat, min_lon, max_lat, max_lon = trasforma_bbox_a_wfs(
@@ -990,8 +984,8 @@ class LineSelectTool(QgsMapTool):
                           f"geografico ({layer_crs.authid()}).")
                     print(f"         Per calcolare correttamente il buffer di "
                           f"{self.buffer_distance}m,")
-                    print(f"         riproietta il layer in un CRS proiettato "
-                          f"(es. EPSG:3857, UTM).")
+                    print("         riproietta il layer in un CRS proiettato "
+                          "(es. EPSG:3857, UTM).")
                     QMessageBox.warning(
                         qgis_iface.mainWindow(),
                         "CRS non valido",
@@ -1007,7 +1001,7 @@ class LineSelectTool(QgsMapTool):
                 feat_id = closest_feature.id()
                 layer_name = closest_layer.name()
 
-                print(f"\n[LINEA] Linea selezionata:")
+                print("\n[LINEA] Linea selezionata:")
                 print(f"                Layer: {layer_name}")
                 print(f"                Feature ID: {feat_id}")
                 print(f"                CRS del layer: {layer_crs.authid()}")

@@ -47,9 +47,9 @@ class AvvisoDialog(QDialog):
         self.setWindowTitle("WFS Catasto - Avviso Importante")
         self.setMinimumSize(550, 480)
         self.setWindowFlags(
-            self.windowFlags()
-            & ~_WinHelpHint
-            & ~_WinCloseHint
+            self.windowFlags() &
+            ~_WinHelpHint &
+            ~_WinCloseHint
         )
 
         layout = QVBoxLayout()
@@ -162,9 +162,9 @@ class SceltaModalitaDialog(QDialog):
         self.setWindowTitle("WFS Catasto - Scelta modalità")
         self.setMinimumWidth(400)
         self.setWindowFlags(
-            self.windowFlags()
-            & ~_WinHelpHint
-            | _WinStaysOnTop
+            self.windowFlags() &
+            ~_WinHelpHint |
+            _WinStaysOnTop
         )
 
         layout = QVBoxLayout()
