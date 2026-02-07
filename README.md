@@ -63,6 +63,10 @@ Un sentito grazie ad [Andrea Borruso](https://github.com/aborruso) per l'idea e 
 
 > Questo repository è interamente creato con l'aiuto di [Claude Code](https://claude.ai/claude-code).
 
+## Video Demo
+
+[![Video Demo del Plugin](https://img.youtube.com/vi/iEFLlQq_9hY/maxresdefault.jpg)](https://youtu.be/iEFLlQq_9hY)
+
 ## Autore
 
 **Salvatore Fiandaca** - [pigrecoinfinito@gmail.com](mailto:pigrecoinfinito@gmail.com)
