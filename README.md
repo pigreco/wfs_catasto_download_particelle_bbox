@@ -30,7 +30,7 @@ Il parsing segue il formato ufficiale dell'Agenzia delle Entrate `CCCCZFFFFAS`, 
 - **A** = codice allegato
 - **S** = codice sviluppo
 
-Per ulteriori dettagli sulla codifica, consultare il file [test/decodifica.md](test/decodifica.md).
+Per ulteriori dettagli sulla codifica, consultare l'articolo di [Andrea Borruso](https://medium.com/tantotanto/le-mappa-castali-diventano-finalmente-utilizzabili-821db2f84533#9547).
 
 ### Caratteristiche tecniche
 
