@@ -47,9 +47,9 @@ class AvvisoDialog(QDialog):
         self.setWindowTitle("WFS Catasto - Avviso Importante")
         self.setMinimumSize(550, 480)
         self.setWindowFlags(
-            self.windowFlags() &
-            ~_WinHelpHint &
-            ~_WinCloseHint
+            self.windowFlags()
+            & ~_WinHelpHint
+            & ~_WinCloseHint
         )
 
         layout = QVBoxLayout()
@@ -162,9 +162,9 @@ class SceltaModalitaDialog(QDialog):
         self.setWindowTitle("WFS Catasto - Scelta modalità")
         self.setMinimumWidth(400)
         self.setWindowFlags(
-            self.windowFlags() &
-            ~_WinHelpHint |
-            _WinStaysOnTop
+            self.windowFlags()
+            & ~_WinHelpHint
+            | _WinStaysOnTop
         )
 
         layout = QVBoxLayout()
@@ -297,6 +297,24 @@ class SceltaModalitaDialog(QDialog):
         group3.setLayout(g3_layout)
         layout.addWidget(group3)
 
+        # --- Gruppo 4: Opzioni ---
+        group_opzioni = QGroupBox("Opzioni")
+        group_opzioni.setStyleSheet(
+            "QGroupBox { font-weight: bold; border: 1px solid #ccc; "
+            "border-radius: 5px; margin-top: 10px; padding-top: 15px; }"
+            "QGroupBox::title { subcontrol-origin: margin; left: 10px; }"
+        )
+        go_layout = QVBoxLayout()
+        self.check_espandi_catastale = QCheckBox(
+            "Espandi riferimento catastale\n"
+            "(sezione, foglio, allegato, sviluppo)"
+        )
+        self.check_espandi_catastale.setStyleSheet("font-weight: normal;")
+        self.check_espandi_catastale.setChecked(False)
+        go_layout.addWidget(self.check_espandi_catastale)
+        group_opzioni.setLayout(go_layout)
+        layout.addWidget(group_opzioni)
+
         # --- Pulsante chiudi ---
         btn_annulla = QPushButton("Chiudi")
         btn_annulla.setMinimumHeight(32)
@@ -310,6 +328,10 @@ class SceltaModalitaDialog(QDialog):
         layout.addWidget(btn_annulla)
 
         self.setLayout(layout)
+
+    @property
+    def espandi_catastale(self):
+        return self.check_espandi_catastale.isChecked()
 
     def _on_disegna(self):
         self.scelta = "disegna"

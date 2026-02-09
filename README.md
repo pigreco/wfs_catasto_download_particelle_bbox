@@ -12,11 +12,32 @@ Tre modalità di selezione dell'area di interesse:
 2. **Seleziona Poligono** - Clicca su un poligono esistente in mappa per estrarne automaticamente il bounding box. Se l'area è grande, viene suddivisa in tile automaticamente.
 3. **Seleziona Linea** - Clicca su una linea nella mappa e crea un buffer personalizzabile (0-100m) per scaricare le particelle che lo intersecano. Il layer deve avere un CRS proiettato (metri).
 
+### Opzione: Espandi riferimento catastale (v1.1.0)
+
+Nella sezione **Opzioni** della finestra di scelta modalità è disponibile il checkbox **"Espandi riferimento catastale"**. Quando attivato, il plugin analizza il campo `NATIONALCADASTRALREFERENCE` e ne estrae 4 nuovi attributi nel layer di output:
+
+| Campo | Tipo | Descrizione |
+|-------|------|-------------|
+| `sezione` | String | Sezione censuaria (lettera, es. A, B; vuoto se assente) |
+| `foglio` | Integer | Numero del foglio catastale |
+| `allegato` | String | Codice allegato (0 = nessuno, Q = quadro d'unione) |
+| `sviluppo` | String | Codice sviluppo (0 = nessuno, U = quadro d'unione) |
+
+Il parsing segue il formato ufficiale dell'Agenzia delle Entrate `CCCCZFFFFAS`, dove:
+- **CCCC** = codice nazionale del comune (già presente nel campo `ADMINISTRATIVEUNIT`)
+- **Z** = sezione censuaria (`_` se assente)
+- **FFFF** = numero foglio (4 cifre, con zeri a sinistra)
+- **A** = codice allegato
+- **S** = codice sviluppo
+
+Per ulteriori dettagli sulla codifica, consultare il file [test/decodifica.md](test/decodifica.md).
+
 ### Caratteristiche tecniche
 
 - Download multi-tile con progress bar per aree estese
 - Deduplicazione automatica delle feature
 - Filtro spaziale per la modalità linea con buffer
+- Espansione opzionale del riferimento catastale nazionale
 - Compatibile con QGIS 3 (Qt5) e QGIS 4 (Qt6)
 
 ## Interfaccia

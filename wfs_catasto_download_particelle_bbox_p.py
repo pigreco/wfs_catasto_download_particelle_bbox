@@ -275,7 +275,8 @@ def scarica_singolo_tile(min_lat, min_lon, max_lat, max_lon):
 
 
 def esegui_download_e_caricamento(min_lat, min_lon, max_lat, max_lon, filter_geom=None,
-                                  layer_name="Particelle WFS"):
+                                  layer_name="Particelle WFS",
+                                  espandi_catastale=False):
     """
     Gestisce il download WFS: singolo o multi-tile con progress bar.
 
@@ -597,12 +598,23 @@ def esegui_download_e_caricamento(min_lat, min_lon, max_lat, max_lon, filter_geo
     original_fields = layer_info["fields"].toList()
     original_fields.append(QgsField("geom_duplicata", QVariant.String))
     original_fields.append(QgsField("gruppo_duplicato", QVariant.Int))
+    if espandi_catastale:
+        original_fields.append(QgsField("sezione", QVariant.String))
+        original_fields.append(QgsField("foglio", QVariant.Int))
+        original_fields.append(QgsField("allegato", QVariant.String))
+        original_fields.append(QgsField("sviluppo", QVariant.String))
     mem_provider.addAttributes(original_fields)
     mem_layer.updateFields()
 
     # Indici dei nuovi campi
     idx_geom_dup = mem_layer.fields().indexOf("geom_duplicata")
     idx_gruppo_dup = mem_layer.fields().indexOf("gruppo_duplicato")
+    if espandi_catastale:
+        idx_sezione = mem_layer.fields().indexOf("sezione")
+        idx_foglio = mem_layer.fields().indexOf("foglio")
+        idx_allegato = mem_layer.fields().indexOf("allegato")
+        idx_sviluppo = mem_layer.fields().indexOf("sviluppo")
+        idx_ncr = layer_info["fields"].indexOf("NATIONALCADASTRALREFERENCE")
 
     # Copia feature con attributi di segnalazione
     new_features = []
@@ -622,6 +634,21 @@ def esegui_download_e_caricamento(min_lat, min_lon, max_lat, max_lon, filter_geo
         new_feat.setAttribute(idx_geom_dup, "si" if is_dup else "no")
         new_feat.setAttribute(idx_gruppo_dup, grp if is_dup else None)
 
+        # Parsing NATIONALCADASTRALREFERENCE (formato CCCCZFFFFAS.particella)
+        if espandi_catastale and idx_ncr >= 0:
+            ncr = feat.attribute(idx_ncr)
+            if ncr and isinstance(ncr, str):
+                codice = ncr.split(".")[0]  # parte prima del punto
+                if len(codice) == 11:  # CCCCZFFFFAS = 11 caratteri
+                    sez = codice[4]  # Z: sezione censuaria
+                    new_feat.setAttribute(idx_sezione, "" if sez == "_" else sez)
+                    try:
+                        new_feat.setAttribute(idx_foglio, int(codice[5:9]))
+                    except ValueError:
+                        new_feat.setAttribute(idx_foglio, None)
+                    new_feat.setAttribute(idx_allegato, codice[9])
+                    new_feat.setAttribute(idx_sviluppo, codice[10])
+
         new_features.append(new_feat)
 
     mem_provider.addFeatures(new_features)
@@ -635,6 +662,8 @@ def esegui_download_e_caricamento(min_lat, min_lon, max_lat, max_lon, filter_geo
     print(f"     CRS: {crs.authid()}")
     print(f"     Geometria: {geom_type_str}")
     print("     Campi aggiunti: 'geom_duplicata' (si/no), 'gruppo_duplicato' (n. gruppo)")
+    if espandi_catastale:
+        print("     Campi catastali: 'sezione', 'foglio', 'allegato', 'sviluppo'")
 
     # Zoom sul layer (trasforma extent nel CRS del progetto)
     canvas = qgis_iface.mapCanvas()
@@ -683,12 +712,13 @@ class BBoxDrawTool(QgsMapTool):
     clicca il secondo angolo per confermare e avviare il download.
     """
 
-    def __init__(self, canvas, on_completed=None):
+    def __init__(self, canvas, on_completed=None, espandi_catastale=False):
         super().__init__(canvas)
         self.canvas = canvas
         self.first_point = None
         self.preview_rb = None
         self.on_completed = on_completed
+        self.espandi_catastale = espandi_catastale
         self._create_preview_rubberband()
 
     def _create_preview_rubberband(self):
@@ -740,7 +770,8 @@ class BBoxDrawTool(QgsMapTool):
             min_lat, min_lon, max_lat, max_lon = trasforma_bbox_a_wfs(rect, project_crs)
             esegui_download_e_caricamento(
                 min_lat, min_lon, max_lat, max_lon,
-                layer_name="Particelle WFS (BBox)"
+                layer_name="Particelle WFS (BBox)",
+                espandi_catastale=self.espandi_catastale
             )
 
             # Ripristina Pan e riapri dialog
@@ -773,10 +804,11 @@ class PolySelectTool(QgsMapTool):
     Estrae il bbox della geometria e avvia il download WFS.
     """
 
-    def __init__(self, canvas, on_completed=None):
+    def __init__(self, canvas, on_completed=None, espandi_catastale=False):
         super().__init__(canvas)
         self.canvas = canvas
         self.on_completed = on_completed
+        self.espandi_catastale = espandi_catastale
 
     def canvasPressEvent(self, event):
         click_map_point = self.toMapCoordinates(event.pos())
@@ -852,7 +884,8 @@ class PolySelectTool(QgsMapTool):
 
                 esegui_download_e_caricamento(
                     min_lat, min_lon, max_lat, max_lon,
-                    layer_name="Particelle WFS (Poligono)"
+                    layer_name="Particelle WFS (Poligono)",
+                    espandi_catastale=self.espandi_catastale
                 )
 
                 qgis_iface.actionPan().trigger()
@@ -877,11 +910,13 @@ class LineSelectTool(QgsMapTool):
     Crea un buffer e scarica le particelle che intersecano il buffer.
     """
 
-    def __init__(self, canvas, buffer_distance=BUFFER_DISTANCE_M, on_completed=None):
+    def __init__(self, canvas, buffer_distance=BUFFER_DISTANCE_M, on_completed=None,
+                 espandi_catastale=False):
         super().__init__(canvas)
         self.canvas = canvas
         self.buffer_distance = buffer_distance
         self.buffer_rb = None  # Rubberband per visualizzare il buffer
+        self.espandi_catastale = espandi_catastale
         self.on_completed = on_completed
 
     def _visualizza_buffer(self, buffer_geom, buffer_crs):
@@ -1041,7 +1076,8 @@ class LineSelectTool(QgsMapTool):
                 esegui_download_e_caricamento(
                     min_lat, min_lon, max_lat, max_lon,
                     filter_geom=buffer_geom_wfs,
-                    layer_name=f"Particelle WFS (Linea buffer {self.buffer_distance} m)"
+                    layer_name=f"Particelle WFS (Linea buffer {self.buffer_distance} m)",
+                    espandi_catastale=self.espandi_catastale
                 )
 
                 qgis_iface.actionPan().trigger()
@@ -1136,6 +1172,7 @@ class WfsCatastoDownloadParticelleBbox:
         """Callback quando l'utente sceglie una modalità dal dialog."""
         dlg = self._dlg
         canvas = self.iface.mapCanvas()
+        espandi = dlg.espandi_catastale
 
         if dlg.scelta == "disegna":
             print("\n  MODALITÀ: Disegna BBox")
@@ -1143,7 +1180,8 @@ class WfsCatastoDownloadParticelleBbox:
             print("  >>> Muovi il mouse per l'anteprima")
             print("  >>> Clicca per il SECONDO angolo")
             print("  >>> Il download partirà automaticamente\n")
-            tool = BBoxDrawTool(canvas, on_completed=self._reopen_dialog)
+            tool = BBoxDrawTool(canvas, on_completed=self._reopen_dialog,
+                                espandi_catastale=espandi)
             canvas.setMapTool(tool)
             self._active_tool = tool
 
@@ -1152,7 +1190,8 @@ class WfsCatastoDownloadParticelleBbox:
             print("  >>> Clicca su un poligono nella mappa")
             print("  >>> Il bbox verrà estratto e il CRS verificato")
             print("  >>> Il download partirà automaticamente\n")
-            tool = PolySelectTool(canvas, on_completed=self._reopen_dialog)
+            tool = PolySelectTool(canvas, on_completed=self._reopen_dialog,
+                                  espandi_catastale=espandi)
             canvas.setMapTool(tool)
             self._active_tool = tool
 
@@ -1164,7 +1203,8 @@ class WfsCatastoDownloadParticelleBbox:
             print("  >>> Verranno scaricate solo le particelle che intersecano il buffer")
             print("  >>> ATTENZIONE: Il layer deve avere un CRS proiettato (metri)\n")
             tool = LineSelectTool(canvas, buffer_distance=buffer_m,
-                                  on_completed=self._reopen_dialog)
+                                  on_completed=self._reopen_dialog,
+                                  espandi_catastale=espandi)
             canvas.setMapTool(tool)
             self._active_tool = tool
 
