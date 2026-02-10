@@ -882,8 +882,20 @@ class PolySelectTool(QgsMapTool):
                     bbox, layer_crs
                 )
 
+                # Trasforma la geometria del poligono in EPSG:6706 per il filtering
+                wfs_crs = QgsCoordinateReferenceSystem(WFS_CRS_ID)
+                if layer_crs.authid() != wfs_crs.authid():
+                    transform_to_wfs = QgsCoordinateTransform(
+                        layer_crs, wfs_crs, QgsProject.instance()
+                    )
+                    poly_geom_wfs = QgsGeometry(geom)
+                    poly_geom_wfs.transform(transform_to_wfs)
+                else:
+                    poly_geom_wfs = geom
+
                 esegui_download_e_caricamento(
                     min_lat, min_lon, max_lat, max_lon,
+                    filter_geom=poly_geom_wfs,
                     layer_name="Particelle WFS (Poligono)",
                     espandi_catastale=self.espandi_catastale
                 )
