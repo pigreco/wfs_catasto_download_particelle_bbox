@@ -1,0 +1,48 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 208" width="240" height="208">
+  <defs>
+    <pattern id="grid" width="20" height="20" patternUnits="userSpaceOnUse">
+      <path d="M 20 0 L 0 0 0 20" fill="none" stroke="#E3E8F0" stroke-width="0.5"/>
+    </pattern>
+  </defs>
+
+  <!-- Sfondo mappa -->
+  <rect x="10" y="10" width="220" height="188" rx="6" fill="#F5F7FA" stroke="#D0D8E8" stroke-width="1"/>
+  <rect x="10" y="10" width="220" height="188" rx="6" fill="url(#grid)"/>
+
+  <!-- Particelle catastali di sfondo -->
+  <polygon points="25,60 60,52 68,100 33,105" fill="#E0F2F1" stroke="#B0BEC5" stroke-width="0.8"/>
+  <polygon points="60,52 115,45 120,95 68,100" fill="#E8F5E9" stroke="#B0BEC5" stroke-width="0.8"/>
+  <polygon points="155,50 210,55 205,105 153,98" fill="#E0F2F1" stroke="#B0BEC5" stroke-width="0.8"/>
+  <polygon points="33,105 68,100 72,150 40,155" fill="#E8F5E9" stroke="#B0BEC5" stroke-width="0.8"/>
+  <polygon points="68,100 120,95 124,148 72,150" fill="#E0F2F1" stroke="#B0BEC5" stroke-width="0.8"/>
+  <polygon points="153,98 205,105 202,155 155,150" fill="#E8F5E9" stroke="#B0BEC5" stroke-width="0.8"/>
+  <polygon points="40,155 72,150 76,185 45,188" fill="#E0F2F1" stroke="#B0BEC5" stroke-width="0.8"/>
+
+  <!-- Poligono selezionato (evidenziato) -->
+  <polygon points="100,35 180,40 192,85 178,140 138,155 88,138 75,80"
+           fill="#00897B" fill-opacity="0.18"
+           stroke="#00897B" stroke-width="2.2"/>
+
+  <!-- Vertici del poligono -->
+  <circle cx="100" cy="35" r="3" fill="#00897B" opacity="0.6"/>
+  <circle cx="180" cy="40" r="3" fill="#00897B" opacity="0.6"/>
+  <circle cx="192" cy="85" r="3" fill="#00897B" opacity="0.6"/>
+  <circle cx="178" cy="140" r="3" fill="#00897B" opacity="0.6"/>
+  <circle cx="138" cy="155" r="3" fill="#00897B" opacity="0.6"/>
+  <circle cx="88" cy="138" r="3" fill="#00897B" opacity="0.6"/>
+  <circle cx="75" cy="80" r="3" fill="#00897B" opacity="0.6"/>
+
+  <!-- BBox estratto dal poligono (tratteggiato) -->
+  <rect x="75" y="35" width="117" height="120" rx="2"
+        fill="none"
+        stroke="#00897B" stroke-width="1.5" stroke-dasharray="6,3" opacity="0.6"/>
+
+  <!-- Cursore che clicca sul poligono -->
+  <g transform="translate(135,85)">
+    <path d="M0,0 L0,16 L4.5,12 L8.5,19 L11,17.5 L7,11 L12.5,10 Z"
+          fill="white" stroke="#1A1A1A" stroke-width="1.2" stroke-linejoin="round"/>
+  </g>
+
+  <!-- Punto di click -->
+  <circle cx="135" cy="85" r="4" fill="#00897B" stroke="white" stroke-width="1.5"/>
+</svg>

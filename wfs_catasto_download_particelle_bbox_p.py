@@ -1134,7 +1134,7 @@ class WfsCatastoDownloadParticelleBbox:
         self.toolbar = self.iface.addToolBar("WFS Catasto Download Particelle")
         self.toolbar.setObjectName("WfsCatastoDownloadParticelleBbox")
 
-        icon_path = os.path.join(self.plugin_dir, "icon.png")
+        icon_path = os.path.join(self.plugin_dir, "icon.svg")
         if os.path.exists(icon_path):
             icon = QIcon(icon_path)
         else:

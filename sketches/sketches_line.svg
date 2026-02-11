@@ -1,0 +1,52 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 232" width="240" height="232">
+  <defs>
+    <pattern id="grid" width="20" height="20" patternUnits="userSpaceOnUse">
+      <path d="M 20 0 L 0 0 0 20" fill="none" stroke="#E3E8F0" stroke-width="0.5"/>
+    </pattern>
+  </defs>
+
+  <!-- Sfondo mappa -->
+  <rect x="10" y="10" width="220" height="212" rx="6" fill="#F5F7FA" stroke="#D0D8E8" stroke-width="1"/>
+  <rect x="10" y="10" width="220" height="212" rx="6" fill="url(#grid)"/>
+
+  <!-- Particelle catastali di sfondo -->
+  <polygon points="20,30 65,25 70,85 25,90" fill="#FFF3E0" stroke="#B0BEC5" stroke-width="0.8"/>
+  <polygon points="65,25 115,28 118,85 70,85" fill="#FBE9E7" stroke="#B0BEC5" stroke-width="0.8"/>
+  <polygon points="140,28 195,22 200,85 145,88" fill="#FFF3E0" stroke="#B0BEC5" stroke-width="0.8"/>
+  <polygon points="25,90 70,85 75,150 30,155" fill="#FBE9E7" stroke="#B0BEC5" stroke-width="0.8"/>
+  <polygon points="70,85 118,85 122,150 75,150" fill="#FFF3E0" stroke="#B0BEC5" stroke-width="0.8"/>
+  <polygon points="145,88 200,85 205,150 150,152" fill="#FBE9E7" stroke="#B0BEC5" stroke-width="0.8"/>
+  <polygon points="30,155 75,150 78,210 35,213" fill="#FFF3E0" stroke="#B0BEC5" stroke-width="0.8"/>
+  <polygon points="75,150 122,150 125,210 78,210" fill="#FBE9E7" stroke="#B0BEC5" stroke-width="0.8"/>
+  <polygon points="150,152 205,150 208,210 153,213" fill="#FFF3E0" stroke="#B0BEC5" stroke-width="0.8"/>
+
+  <!-- Area buffer attorno alla linea (verticale) -->
+  <path d="M 108,18 C 115,60 98,100 108,130 C 118,160 100,190 110,222
+           L 138,222
+           C 128,190 145,160 135,130 C 125,100 142,60 135,18 Z"
+        fill="#FF6D00" fill-opacity="0.15"
+        stroke="#FF6D00" stroke-width="1.5" stroke-dasharray="5,3"/>
+
+  <!-- Linea stradale (asse verticale Nord-Sud) -->
+  <path d="M 122,18 C 129,60 110,100 122,130 C 133,160 112,190 124,222"
+        fill="none"
+        stroke="#FF6D00" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+
+  <!-- Indicatore buffer (frecce orizzontali) -->
+  <line x1="100" y1="130" x2="122" y2="130" stroke="#FF6D00" stroke-width="1" opacity="0.7"/>
+  <polygon points="100,130 105,127 105,133" fill="#FF6D00" opacity="0.7"/>
+  <line x1="145" y1="130" x2="122" y2="130" stroke="#FF6D00" stroke-width="1" opacity="0.7"/>
+  <polygon points="145,130 140,127 140,133" fill="#FF6D00" opacity="0.7"/>
+
+  <!-- Etichetta buffer -->
+  <text x="152" y="134" font-family="Arial, sans-serif" font-size="9" fill="#FF6D00" font-weight="bold">buffer</text>
+
+  <!-- Cursore che clicca sulla linea -->
+  <g transform="translate(127,72)">
+    <path d="M0,0 L0,16 L4.5,12 L8.5,19 L11,17.5 L7,11 L12.5,10 Z"
+          fill="white" stroke="#1A1A1A" stroke-width="1.2" stroke-linejoin="round"/>
+  </g>
+
+  <!-- Punto di click -->
+  <circle cx="127" cy="72" r="4" fill="#FF6D00" stroke="white" stroke-width="1.5"/>
+</svg>

@@ -1,0 +1,206 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg
+   width="200"
+   height="200"
+   viewBox="0 0 200 200"
+   version="1.1"
+   id="svg16"
+   sodipodi:docname="icon.svg"
+   inkscape:version="1.4 (86a8ad7, 2024-10-11)"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns:xlink="http://www.w3.org/1999/xlink"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <sodipodi:namedview
+     id="namedview16"
+     pagecolor="#ffffff"
+     bordercolor="#666666"
+     borderopacity="1.0"
+     inkscape:showpageshadow="2"
+     inkscape:pageopacity="0.0"
+     inkscape:pagecheckerboard="0"
+     inkscape:deskcolor="#d1d1d1"
+     inkscape:zoom="4.275"
+     inkscape:cx="100"
+     inkscape:cy="101.16959"
+     inkscape:window-width="2486"
+     inkscape:window-height="1057"
+     inkscape:window-x="66"
+     inkscape:window-y="-8"
+     inkscape:window-maximized="1"
+     inkscape:current-layer="svg16"
+     showgrid="false" />
+  <!-- Definizione pattern particelle catastali -->
+  <defs
+     id="defs10">
+    <pattern
+       inkscape:collect="always"
+       xlink:href="#cadastralPattern"
+       id="pattern16"
+       patternTransform="matrix(1.1700066,0,0,1.1700066,-17.550098,-17.550098)" />
+    <pattern
+       id="cadastralPattern"
+       x="0"
+       y="0"
+       width="120"
+       height="120"
+       patternUnits="userSpaceOnUse">
+      <!-- Particelle irregolari molto grandi -->
+      <path
+         d="M 0,0 L 45,5 L 50,35 L 42,65 L 12,70 L 0,45 Z"
+         fill="#e8f4e8"
+         stroke="#669966"
+         stroke-width="1.5"
+         id="path1" />
+      <path
+         d="M 50,35 L 75,20 L 95,28 L 90,58 L 75,72 L 42,65 Z"
+         fill="#f4f4e8"
+         stroke="#999966"
+         stroke-width="1.5"
+         id="path2" />
+      <path
+         d="M 0,70 L 12,70 L 32,95 L 28,120 L 0,120 Z"
+         fill="#ffe8e8"
+         stroke="#996666"
+         stroke-width="1.5"
+         id="path3" />
+      <path
+         d="M 32,95 L 62,82 L 85,92 L 78,115 L 55,120 L 28,120 Z"
+         fill="#e8e8ff"
+         stroke="#666699"
+         stroke-width="1.5"
+         id="path4" />
+      <path
+         d="M 95,28 L 120,12 L 120,52 L 105,62 L 90,58 Z"
+         fill="#fff4e8"
+         stroke="#997744"
+         stroke-width="1.5"
+         id="path5" />
+      <path
+         d="M 75,72 L 105,62 L 120,75 L 118,105 L 95,110 L 62,82 Z"
+         fill="#e8fff4"
+         stroke="#669988"
+         stroke-width="1.5"
+         id="path6" />
+      <path
+         d="M 85,92 L 95,110 L 100,120 L 55,120 L 78,115 Z"
+         fill="#f4e8ff"
+         stroke="#886699"
+         stroke-width="1.5"
+         id="path7" />
+      <path
+         d="M 95,110 L 118,105 L 120,120 L 100,120 Z"
+         fill="#fff4f4"
+         stroke="#996688"
+         stroke-width="1.5"
+         id="path8" />
+      <path
+         d="M 45,5 L 75,20 L 82,0 L 52,0 Z"
+         fill="#e8ffff"
+         stroke="#668899"
+         stroke-width="1.5"
+         id="path9" />
+      <path
+         d="M 82,0 L 120,0 L 120,12 L 95,28 L 75,20 Z"
+         fill="#ffffee"
+         stroke="#999988"
+         stroke-width="1.5"
+         id="path10" />
+    </pattern>
+  </defs>
+  <!-- Sfondo con bordo arrotondato -->
+  <!-- Pattern particelle catastali -->
+  <rect
+     x="0"
+     y="0"
+     width="198.90111"
+     height="198.90111"
+     rx="14.040078"
+     ry="14.040078"
+     fill="url(#cadastralPattern)"
+     id="rect11"
+     style="fill:url(#pattern16);stroke-width:1.17001" />
+  <!-- Strada tortuosa diagonale -->
+  <path
+     d="M 20,180 Q 36,164 46.666667,153.33333 57.333333,142.66667 68,126.66667 83.999999,110.66667 100,100 116,89.333338 132,73.333339 148,57.333341 164,41.333342 180,25.333343 190.66667,9.3333436"
+     fill="none"
+     stroke="#888888"
+     stroke-width="10.6666"
+     stroke-linecap="round"
+     id="path11" />
+  <!-- Linea centrale della strada -->
+  <path
+     d="M 20,180 Q 35,165 45,155 T 65,130 Q 80,115 95,105 T 125,80 Q 140,65 155,50 T 180,20"
+     fill="none"
+     stroke="#ffff99"
+     stroke-width="2"
+     stroke-dasharray="8,6"
+     stroke-linecap="round"
+     id="path12" />
+  <!-- Rettangolo tratteggiato blu centrale con opacità 50% -->
+  <rect
+     x="16.396534"
+     y="10.626345"
+     width="169.69124"
+     height="108.35405"
+     fill="#3399ff"
+     fill-opacity="0.5"
+     stroke="#0066ff"
+     stroke-width="3.45985"
+     stroke-dasharray="6, 4"
+     rx="4.242281"
+     ry="4.0632768"
+     id="rect12"
+     style="fill:#3399ff;fill-opacity:0.28941441" />
+  <!-- Cursore del mouse -->
+  <g
+     transform="matrix(2,0,0,2,147.5,87)"
+     id="g13">
+    <!-- Ombra del cursore -->
+    <polygon
+       points="6,15 10,24 14,22 10,13 18,13 0,0 0,20 "
+       fill="#00000040"
+       transform="translate(2,2)"
+       id="polygon12" />
+    <!-- Corpo del cursore nero con bordo bianco -->
+    <polygon
+       points="6,15 10,24 14,22 10,13 18,13 0,0 0,20 "
+       fill="#000000"
+       stroke="#ffffff"
+       stroke-width="1.5"
+       id="polygon13" />
+  </g>
+  <!-- Piccoli quadratini decorativi agli angoli -->
+  <circle
+     cx="35"
+     cy="45"
+     r="2.5"
+     fill="#999999"
+     id="circle13" />
+  <circle
+     cx="165"
+     cy="45"
+     r="2.5"
+     fill="#999999"
+     id="circle14" />
+  <circle
+     cx="35"
+     cy="135"
+     r="2.5"
+     fill="#999999"
+     id="circle15" />
+  <!-- Testo WFS centrato in basso -->
+  <text
+     x="94.616722"
+     y="192.87219"
+     font-family="Arial, sans-serif"
+     font-size="59.1658px"
+     font-weight="bold"
+     font-style="italic"
+     fill="#333333"
+     stroke="#ffffff"
+     stroke-width="1.84893"
+     text-anchor="middle"
+     id="text16">WFS</text>
+</svg>

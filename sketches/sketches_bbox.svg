@@ -1,0 +1,45 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 208" width="240" height="208">
+  <defs>
+    <pattern id="grid" width="20" height="20" patternUnits="userSpaceOnUse">
+      <path d="M 20 0 L 0 0 0 20" fill="none" stroke="#E3E8F0" stroke-width="0.5"/>
+    </pattern>
+  </defs>
+
+  <!-- Sfondo mappa -->
+  <rect x="10" y="10" width="220" height="188" rx="6" fill="#F5F7FA" stroke="#D0D8E8" stroke-width="1"/>
+  <rect x="10" y="10" width="220" height="188" rx="6" fill="url(#grid)"/>
+
+  <!-- Particelle catastali di sfondo -->
+  <polygon points="30,55 70,48 78,95 38,100" fill="#E8EAF6" stroke="#B0BEC5" stroke-width="0.8"/>
+  <polygon points="70,48 125,42 130,88 78,95" fill="#E0E7FA" stroke="#B0BEC5" stroke-width="0.8"/>
+  <polygon points="125,42 175,50 170,98 130,88" fill="#E8EAF6" stroke="#B0BEC5" stroke-width="0.8"/>
+  <polygon points="38,100 78,95 82,145 42,150" fill="#E0E7FA" stroke="#B0BEC5" stroke-width="0.8"/>
+  <polygon points="78,95 130,88 135,140 82,145" fill="#E8EAF6" stroke="#B0BEC5" stroke-width="0.8"/>
+  <polygon points="130,88 170,98 168,148 135,140" fill="#E0E7FA" stroke="#B0BEC5" stroke-width="0.8"/>
+  <polygon points="170,98 210,60 215,145 168,148" fill="#E8EAF6" stroke="#B0BEC5" stroke-width="0.8"/>
+  <polygon points="42,150 82,145 86,180 48,185" fill="#E8EAF6" stroke="#B0BEC5" stroke-width="0.8"/>
+  <polygon points="82,145 135,140 138,178 86,180" fill="#E0E7FA" stroke="#B0BEC5" stroke-width="0.8"/>
+
+  <!-- Rettangolo BBox tratteggiato -->
+  <rect x="55" y="55" width="135" height="100" rx="2"
+        fill="#2962FF" fill-opacity="0.12"
+        stroke="#2962FF" stroke-width="2" stroke-dasharray="8,4"/>
+
+  <!-- Punto primo click -->
+  <circle cx="55" cy="55" r="5" fill="#2962FF" stroke="white" stroke-width="1.5"/>
+  <text x="55" y="45" text-anchor="middle" font-family="Arial, sans-serif" font-size="10" fill="#2962FF" font-weight="bold">1</text>
+
+  <!-- Punto secondo click -->
+  <circle cx="190" cy="155" r="5" fill="#2962FF" stroke="white" stroke-width="1.5"/>
+  <text x="190" y="173" text-anchor="middle" font-family="Arial, sans-serif" font-size="10" fill="#2962FF" font-weight="bold">2</text>
+
+  <!-- Cursore stilizzato -->
+  <g transform="translate(195,147)">
+    <path d="M0,0 L0,16 L4.5,12 L8.5,19 L11,17.5 L7,11 L12.5,10 Z"
+          fill="white" stroke="#1A1A1A" stroke-width="1.2" stroke-linejoin="round"/>
+  </g>
+
+  <!-- Freccia tratteggiata tra i due punti -->
+  <line x1="62" y1="58" x2="183" y2="152"
+        stroke="#2962FF" stroke-width="1" stroke-dasharray="3,3" opacity="0.5"/>
+</svg>

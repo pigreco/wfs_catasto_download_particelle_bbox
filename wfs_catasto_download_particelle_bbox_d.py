@@ -6,8 +6,10 @@ Interfaccia grafica per la scelta della modalità di selezione area.
 Compatibile con QGIS 3 (Qt5) e QGIS 4 (Qt6).
 """
 
+import os
+
 from qgis.PyQt.QtCore import Qt
-from qgis.PyQt.QtGui import QFont
+from qgis.PyQt.QtGui import QFont, QPixmap
 from qgis.PyQt.QtWidgets import (
     QDialog,
     QVBoxLayout,
@@ -34,6 +36,13 @@ except AttributeError:
     _WinStaysOnTop = Qt.WindowStaysOnTopHint
     _AlignCenter = Qt.AlignCenter
     _RichText = Qt.RichText
+
+try:
+    _KeepAspectRatio = Qt.AspectRatioMode.KeepAspectRatio
+    _SmoothTransformation = Qt.TransformationMode.SmoothTransformation
+except AttributeError:
+    _KeepAspectRatio = Qt.KeepAspectRatio
+    _SmoothTransformation = Qt.SmoothTransformation
 
 
 class AvvisoDialog(QDialog):
@@ -194,14 +203,15 @@ class SceltaModalitaDialog(QDialog):
             "border-radius: 5px; margin-top: 10px; padding-top: 15px; }"
             "QGroupBox::title { subcontrol-origin: margin; left: 10px; }"
         )
-        g1_layout = QVBoxLayout()
+        g1_layout = QHBoxLayout()
+        g1_left = QVBoxLayout()
         desc1 = QLabel(
             "Clicca due punti sulla mappa per disegnare\n"
             "un rettangolo che definisce l'area di download."
         )
         desc1.setWordWrap(True)
         desc1.setStyleSheet("font-weight: normal;")
-        g1_layout.addWidget(desc1)
+        g1_left.addWidget(desc1)
 
         btn_disegna = QPushButton("  Disegna BBox sulla mappa")
         btn_disegna.setMinimumHeight(40)
@@ -212,7 +222,9 @@ class SceltaModalitaDialog(QDialog):
             "QPushButton:hover { background-color: #1E4FD0; }"
         )
         btn_disegna.clicked.connect(self._on_disegna)
-        g1_layout.addWidget(btn_disegna)
+        g1_left.addWidget(btn_disegna)
+        g1_layout.addLayout(g1_left, 1)
+        g1_layout.addWidget(self._svg_label("sketches_bbox.svg"))
         group1.setLayout(g1_layout)
         layout.addWidget(group1)
 
@@ -223,7 +235,8 @@ class SceltaModalitaDialog(QDialog):
             "border-radius: 5px; margin-top: 10px; padding-top: 15px; }"
             "QGroupBox::title { subcontrol-origin: margin; left: 10px; }"
         )
-        g2_layout = QVBoxLayout()
+        g2_layout = QHBoxLayout()
+        g2_left = QVBoxLayout()
         desc2 = QLabel(
             "Clicca su un poligono esistente in mappa.\n"
             "Il bbox della geometria verrà estratto automaticamente.\n"
@@ -231,7 +244,7 @@ class SceltaModalitaDialog(QDialog):
         )
         desc2.setWordWrap(True)
         desc2.setStyleSheet("font-weight: normal;")
-        g2_layout.addWidget(desc2)
+        g2_left.addWidget(desc2)
 
         btn_poligono = QPushButton("  Seleziona Poligono sulla mappa")
         btn_poligono.setMinimumHeight(40)
@@ -242,7 +255,9 @@ class SceltaModalitaDialog(QDialog):
             "QPushButton:hover { background-color: #006B5E; }"
         )
         btn_poligono.clicked.connect(self._on_poligono)
-        g2_layout.addWidget(btn_poligono)
+        g2_left.addWidget(btn_poligono)
+        g2_layout.addLayout(g2_left, 1)
+        g2_layout.addWidget(self._svg_label("sketches_polygon.svg"))
         group2.setLayout(g2_layout)
         layout.addWidget(group2)
 
@@ -253,7 +268,8 @@ class SceltaModalitaDialog(QDialog):
             "border-radius: 5px; margin-top: 10px; padding-top: 15px; }"
             "QGroupBox::title { subcontrol-origin: margin; left: 10px; }"
         )
-        g3_layout = QVBoxLayout()
+        g3_layout = QHBoxLayout()
+        g3_left = QVBoxLayout()
         desc3 = QLabel(
             "Clicca su una linea nella mappa.\n"
             "Verrà creato un buffer e scaricate le particelle\n"
@@ -262,7 +278,7 @@ class SceltaModalitaDialog(QDialog):
         )
         desc3.setWordWrap(True)
         desc3.setStyleSheet("font-weight: normal;")
-        g3_layout.addWidget(desc3)
+        g3_left.addWidget(desc3)
 
         # Spinbox per valore buffer
         buffer_layout = QHBoxLayout()
@@ -282,7 +298,7 @@ class SceltaModalitaDialog(QDialog):
         self.buffer_spinbox.valueChanged.connect(self._on_buffer_changed)
         buffer_layout.addWidget(self.buffer_spinbox)
         buffer_layout.addStretch()
-        g3_layout.addLayout(buffer_layout)
+        g3_left.addLayout(buffer_layout)
 
         btn_asse = QPushButton("  Seleziona Linea")
         btn_asse.setMinimumHeight(40)
@@ -293,7 +309,9 @@ class SceltaModalitaDialog(QDialog):
             "QPushButton:hover { background-color: #E65100; }"
         )
         btn_asse.clicked.connect(self._on_asse)
-        g3_layout.addWidget(btn_asse)
+        g3_left.addWidget(btn_asse)
+        g3_layout.addLayout(g3_left, 1)
+        g3_layout.addWidget(self._svg_label("sketches_line.svg", 140, 136))
         group3.setLayout(g3_layout)
         layout.addWidget(group3)
 
@@ -306,8 +324,7 @@ class SceltaModalitaDialog(QDialog):
         )
         go_layout = QVBoxLayout()
         self.check_espandi_catastale = QCheckBox(
-            "Espandi riferimento catastale\n"
-            "(sezione, foglio, allegato, sviluppo)"
+            "Espandi riferimento catastale (sezione, foglio, allegato, sviluppo)"
         )
         self.check_espandi_catastale.setStyleSheet("font-weight: normal;")
         self.check_espandi_catastale.setChecked(False)
@@ -328,6 +345,18 @@ class SceltaModalitaDialog(QDialog):
         layout.addWidget(btn_annulla)
 
         self.setLayout(layout)
+
+    def _svg_label(self, filename, max_w=140, max_h=121):
+        """Crea una QLabel con l'immagine SVG dalla cartella sketches."""
+        path = os.path.join(os.path.dirname(__file__), "sketches", filename)
+        lbl = QLabel()
+        lbl.setAlignment(_AlignCenter)
+        pixmap = QPixmap(path)
+        if not pixmap.isNull():
+            lbl.setPixmap(
+                pixmap.scaled(max_w, max_h, _KeepAspectRatio, _SmoothTransformation)
+            )
+        return lbl
 
     @property
     def espandi_catastale(self):
