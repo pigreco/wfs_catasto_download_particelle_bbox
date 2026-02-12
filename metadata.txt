@@ -5,16 +5,17 @@
 [general]
 name=WFS Catasto Download Particelle BBox
 qgisMinimumVersion=3.0
-description=Download particelle catastali dal WFS dell'Agenzia delle Entrate tramite BBox interattivo, selezione poligono o linea con buffer.
-version=1.3.0
+description=Download particelle catastali dal WFS dell'Agenzia delle Entrate tramite BBox, selezione poligono, linea con buffer o layer di punti.
+version=1.4.0
 author=Salvatore Fiandaca
 email=pigrecoinfinito@gmail.com
 
 about=WFS Catasto Download Particelle BBox - Plugin per QGIS che consente di scaricare le particelle catastali dal servizio WFS dell'Agenzia delle Entrate (INSPIRE).
-    Tre modalita' di selezione dell'area di interesse:
+    Quattro modalita' di selezione dell'area di interesse:
     1) Disegna BBox: clicca due punti sulla mappa per disegnare un rettangolo di download.
     2) Seleziona Poligono: clicca su un poligono esistente per estrarne il bounding box.
     3) Seleziona Linea: clicca su una linea e crea un buffer personalizzabile (0-100m) per scaricare le particelle che lo intersecano.
+    4) Seleziona Punti: clicca su un layer di punti (o direttamente in mappa) per scaricare le particelle che contengono i punti. Supporta selezione parziale e auto-riproiezione UTM per CRS geografici.
     Opzione "Espandi riferimento catastale": estrae dal campo NATIONALCADASTRALREFERENCE i campi sezione, foglio, allegato e sviluppo (formato CCCCZFFFFAS).
     Supporta download multi-tile con progress bar, deduplicazione feature e filtro spaziale. Compatibile con QGIS 3 (Qt5) e QGIS 4 (Qt6).
     ---
@@ -29,6 +30,12 @@ repository=https://github.com/pigreco/wfs_catasto_download_particelle_bbox
 
 hasProcessingProvider=no
 changelog=
+    1.4.0 - Nuova modalita' Seleziona Punti: scarica particelle da layer di punti
+            (selezionati o tutti) con buffer, dissolve e filtro point-in-polygon.
+            Fallback click libero per scaricare la particella sotto il cursore.
+            Auto-riproiezione UTM per layer con CRS geografico.
+            GUI ristrutturata in griglia 2x2 con parametri Snap e Buffer.
+            Aggiunto tasto ESC per annullare qualsiasi modalita'.
     1.3.0 - Aggiunta illustrazioni SVG nella finestra di scelta modalità
             per ogni gruppo (BBox, Poligono, Linea). Layout ottimizzato
             con immagini affiancate. Icona plugin aggiornata a SVG.

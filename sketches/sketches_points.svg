@@ -1,0 +1,58 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 208" width="240" height="208">
+  <defs>
+    <pattern id="grid" width="20" height="20" patternUnits="userSpaceOnUse">
+      <path d="M 20 0 L 0 0 0 20" fill="none" stroke="#E3E8F0" stroke-width="0.5"/>
+    </pattern>
+  </defs>
+
+  <!-- Sfondo mappa -->
+  <rect x="10" y="10" width="220" height="188" rx="6" fill="#F5F7FA" stroke="#D0D8E8" stroke-width="1"/>
+  <rect x="10" y="10" width="220" height="188" rx="6" fill="url(#grid)"/>
+
+  <!-- Riga 1 di particelle -->
+  <polygon points="20,30 60,25 65,70 25,73" fill="#F3E5F5" stroke="#B0BEC5" stroke-width="0.8"/>
+  <polygon points="60,25 105,28 108,72 65,70" fill="#EDE7F6" stroke="#B0BEC5" stroke-width="0.8"/>
+  <polygon points="105,28 155,24 158,68 108,72" fill="#F3E5F5" stroke="#B0BEC5" stroke-width="0.8"/>
+  <polygon points="155,24 210,28 212,70 158,68" fill="#EDE7F6" stroke="#B0BEC5" stroke-width="0.8"/>
+
+  <!-- Riga 2 di particelle -->
+  <polygon points="25,73 65,70 68,118 30,122" fill="#EDE7F6" stroke="#B0BEC5" stroke-width="0.8"/>
+  <polygon points="65,70 108,72 112,120 68,118" fill="#F3E5F5" stroke="#B0BEC5" stroke-width="0.8"/>
+  <polygon points="108,72 158,68 162,118 112,120" fill="#EDE7F6" stroke="#B0BEC5" stroke-width="0.8"/>
+  <polygon points="158,68 212,70 215,116 162,118" fill="#F3E5F5" stroke="#B0BEC5" stroke-width="0.8"/>
+
+  <!-- Riga 3 di particelle -->
+  <polygon points="30,122 68,118 72,168 35,172" fill="#F3E5F5" stroke="#B0BEC5" stroke-width="0.8"/>
+  <polygon points="68,118 112,120 116,170 72,168" fill="#EDE7F6" stroke="#B0BEC5" stroke-width="0.8"/>
+  <polygon points="112,120 162,118 165,168 116,170" fill="#F3E5F5" stroke="#B0BEC5" stroke-width="0.8"/>
+  <polygon points="162,118 215,116 218,166 165,168" fill="#EDE7F6" stroke="#B0BEC5" stroke-width="0.8"/>
+
+  <!-- Riga 4 di particelle -->
+  <polygon points="35,172 72,168 75,195 38,198" fill="#EDE7F6" stroke="#B0BEC5" stroke-width="0.8"/>
+  <polygon points="72,168 116,170 119,197 75,195" fill="#F3E5F5" stroke="#B0BEC5" stroke-width="0.8"/>
+  <polygon points="116,170 165,168 168,195 119,197" fill="#EDE7F6" stroke="#B0BEC5" stroke-width="0.8"/>
+  <polygon points="165,168 218,166 220,195 168,195" fill="#F3E5F5" stroke="#B0BEC5" stroke-width="0.8"/>
+
+  <!-- Particelle SELEZIONATE (sparse, non contigue) -->
+  <polygon points="60,25 105,28 108,72 65,70"
+           fill="#7B1FA2" fill-opacity="0.20"
+           stroke="#7B1FA2" stroke-width="2"/>
+  <polygon points="158,68 212,70 215,116 162,118"
+           fill="#7B1FA2" fill-opacity="0.20"
+           stroke="#7B1FA2" stroke-width="2"/>
+  <polygon points="30,122 68,118 72,168 35,172"
+           fill="#7B1FA2" fill-opacity="0.20"
+           stroke="#7B1FA2" stroke-width="2"/>
+  <polygon points="116,170 165,168 168,195 119,197"
+           fill="#7B1FA2" fill-opacity="0.20"
+           stroke="#7B1FA2" stroke-width="2"/>
+
+  <!-- Punti del layer (sparsi, uno per particella selezionata) -->
+  <circle cx="82" cy="48" r="5" fill="#7B1FA2" stroke="white" stroke-width="1.5"/>
+  <circle cx="185" cy="92" r="5" fill="#7B1FA2" stroke="white" stroke-width="1.5"/>
+  <circle cx="50" cy="145" r="5" fill="#7B1FA2" stroke="white" stroke-width="1.5"/>
+  <circle cx="142" cy="182" r="5" fill="#7B1FA2" stroke="white" stroke-width="1.5"/>
+  <!-- Due punti nella stessa particella -->
+  <circle cx="75" cy="42" r="5" fill="#7B1FA2" stroke="white" stroke-width="1.5"/>
+  <circle cx="175" cy="100" r="5" fill="#7B1FA2" stroke="white" stroke-width="1.5"/>
+</svg>

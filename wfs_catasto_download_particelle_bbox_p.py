@@ -54,9 +54,11 @@ from .wfs_catasto_download_particelle_bbox_d import AvvisoDialog, SceltaModalita
 try:
     _GEOM_POLYGON = Qgis.GeometryType.Polygon
     _GEOM_LINE = Qgis.GeometryType.Line
+    _GEOM_POINT = Qgis.GeometryType.Point
 except AttributeError:
     _GEOM_POLYGON = QgsWkbTypes.PolygonGeometry
     _GEOM_LINE = QgsWkbTypes.LineGeometry
+    _GEOM_POINT = QgsWkbTypes.PointGeometry
 
 
 def _exec_dialog(dialog):
@@ -91,15 +93,25 @@ def _is_line_layer(layer):
         return layer.geometryType() == 1
 
 
+def _is_point_layer(layer):
+    """Verifica se il layer è puntuale (compatibile QGIS 3/4)."""
+    try:
+        return layer.geometryType() == Qgis.GeometryType.Point
+    except AttributeError:
+        return layer.geometryType() == 0
+
+
 # Qt enum scoped (Qt6) vs flat (Qt5)
 try:
     _WindowModal = Qt.WindowModality.WindowModal
     _DashLine = Qt.PenStyle.DashLine
     _DialogAccepted = QDialog.DialogCode.Accepted
+    _Key_Escape = Qt.Key.Key_Escape
 except AttributeError:
     _WindowModal = Qt.WindowModal
     _DashLine = Qt.DashLine
     _DialogAccepted = QDialog.Accepted
+    _Key_Escape = Qt.Key_Escape
 
 
 # =============================================================================
@@ -182,6 +194,19 @@ def stima_area_km2(min_lat, min_lon, max_lat, max_lon):
     km_per_lat = 111.0
     km_per_lon = 111.0 * math.cos(math.radians(lat_media))
     return (delta_lat * km_per_lat) * (delta_lon * km_per_lon)
+
+
+def _determina_utm_epsg(lon, lat):
+    """
+    Determina il codice EPSG della zona UTM per una coordinata in gradi.
+    Per l'Italia: UTM 32N (6-12E), 33N (12-18E), 34N (18-24E).
+    """
+    zona = int(math.floor((lon + 180.0) / 6.0)) + 1
+    if lat >= 0:
+        epsg = 32600 + zona
+    else:
+        epsg = 32700 + zona
+    return f"EPSG:{epsg}"
 
 
 def calcola_griglia_tile(min_lat, min_lon, max_lat, max_lon, max_tile_km2):
@@ -276,7 +301,8 @@ def scarica_singolo_tile(min_lat, min_lon, max_lat, max_lon):
 
 def esegui_download_e_caricamento(min_lat, min_lon, max_lat, max_lon, filter_geom=None,
                                   layer_name="Particelle WFS",
-                                  espandi_catastale=False):
+                                  espandi_catastale=False,
+                                  post_filter_points=None):
     """
     Gestisce il download WFS: singolo o multi-tile con progress bar.
 
@@ -284,7 +310,7 @@ def esegui_download_e_caricamento(min_lat, min_lon, max_lat, max_lon, filter_geo
         min_lat, min_lon, max_lat, max_lon: Coordinate bbox in EPSG:6706
         filter_geom: (opzionale) QgsGeometry in EPSG:6706 per filtrare le feature
         layer_name: (opzionale) Nome del layer di output
-                     che intersecano questa geometria (es. buffer asse stradale)
+                     che intersecano questa geometria (es. buffer linea/punti)
     """
     area_km2 = stima_area_km2(min_lat, min_lon, max_lat, max_lon)
     print(f"\n[BBOX] Dimensione stimata: ~{area_km2:.1f} km²")
@@ -293,7 +319,7 @@ def esegui_download_e_caricamento(min_lat, min_lon, max_lat, max_lon, filter_geo
     tiles = calcola_griglia_tile(min_lat, min_lon, max_lat, max_lon, MAX_TILE_KM2)
     n_tiles_totali = len(tiles)
 
-    # --- Filtra tile che intersecano il buffer (ottimizzazione per asse stradale) ---
+    # --- Filtra tile che intersecano il filtro spaziale (ottimizzazione) ---
     tiles_saltate = 0
     if filter_geom is not None and n_tiles_totali > 1:
         tiles_filtrate = []
@@ -328,7 +354,7 @@ def esegui_download_e_caricamento(min_lat, min_lon, max_lat, max_lon, filter_geo
         if tiles_saltate > 0:
             msg = (
                 f"L'area selezionata (~{area_km2:.1f} km²) richiede {n_tiles_totali} tile,\n"
-                f"ma solo {n_tiles} intersecano il buffer dell'asse stradale.\n\n"
+                f"ma solo {n_tiles} intersecano il filtro spaziale.\n\n"
                 f"Tile da scaricare: {n_tiles} (saltate: {tiles_saltate})\n"
                 f"Tempo stimato: ~{tempo_str}\n"
                 f"(pausa di {PAUSA_SECONDI} sec tra ogni chiamata)\n\n"
@@ -554,8 +580,9 @@ def esegui_download_e_caricamento(min_lat, min_lon, max_lat, max_lon, filter_geo
     print(f"    Geometrie duplicate:            {duplicati_geom} (mantenute, segnalate)")
     print(f"    Feature finali:                 {len(dopo_dedup_id)}")
 
-    # --- FASE 3: Filtro spaziale (opzionale, per asse stradale) ---
+    # --- FASE 3: Filtro spaziale (opzionale, per linea / punti) ---
     filtrate_spaziale = 0
+    filtrate_punti = 0
     if filter_geom is not None:
         print("\n--- Filtro spaziale (intersezione con buffer) ---")
         features_filtrate = []
@@ -579,6 +606,35 @@ def esegui_download_e_caricamento(min_lat, min_lon, max_lat, max_lon, filter_geo
 
         dopo_dedup_id = features_filtrate
         geom_dup_map = nuova_geom_dup_map
+
+    # --- FASE 3b: Filtro puntuale (point-in-polygon, per modalità Punti) ---
+    if post_filter_points is not None:
+        print("\n--- Filtro puntuale (point-in-polygon) ---")
+        features_con_punto = []
+        nuova_geom_dup_map_2 = {}
+
+        for i, feat in enumerate(dopo_dedup_id):
+            geom = feat.geometry()
+            if geom.isNull() or geom.isEmpty():
+                continue
+            contiene_punto = False
+            for pt_geom in post_filter_points:
+                if geom.intersects(pt_geom):
+                    contiene_punto = True
+                    break
+            if contiene_punto:
+                nuovo_idx = len(features_con_punto)
+                features_con_punto.append(feat)
+                if i in geom_dup_map:
+                    nuova_geom_dup_map_2[nuovo_idx] = geom_dup_map[i]
+
+        filtrate_punti = len(dopo_dedup_id) - len(features_con_punto)
+        print(f"    Feature dopo filtro buffer:    {len(dopo_dedup_id)}")
+        print(f"    Feature che contengono punti:  {len(features_con_punto)}")
+        print(f"    Feature escluse:               {filtrate_punti}")
+
+        dopo_dedup_id = features_con_punto
+        geom_dup_map = nuova_geom_dup_map_2
 
     # Tutte le feature vengono mantenute
     unique_features = dopo_dedup_id
@@ -699,6 +755,8 @@ def esegui_download_e_caricamento(min_lat, min_lon, max_lat, max_lon, filter_geo
         print("  Filtra con: \"geom_duplicata\" = 'si'")
     if filtrate_spaziale > 0:
         print(f"  Filtro buffer:            {filtrate_spaziale} escluse (non intersecano)")
+    if filtrate_punti > 0:
+        print(f"  Filtro punti (PiP):       {filtrate_punti} escluse (non contengono punti)")
     print("=" * 60)
 
 
@@ -783,6 +841,13 @@ class BBoxDrawTool(QgsMapTool):
         if self.first_point is not None:
             point = self.toMapCoordinates(event.pos())
             self._update_preview(point)
+
+    def keyPressEvent(self, event):
+        if event.key() == _Key_Escape:
+            print("[BBOX] Operazione annullata dall'utente (ESC).")
+            qgis_iface.actionPan().trigger()
+            if self.on_completed:
+                self.on_completed()
 
     def deactivate(self):
         if self.preview_rb:
@@ -907,6 +972,13 @@ class PolySelectTool(QgsMapTool):
 
         if not found:
             print("[POLIGONO] Nessun poligono trovato nel punto cliccato. Riprova.")
+
+    def keyPressEvent(self, event):
+        if event.key() == _Key_Escape:
+            print("[POLIGONO] Operazione annullata dall'utente (ESC).")
+            qgis_iface.actionPan().trigger()
+            if self.on_completed:
+                self.on_completed()
 
     def deactivate(self):
         super().deactivate()
@@ -1100,8 +1172,375 @@ class LineSelectTool(QgsMapTool):
         if not found:
             print("[LINEA] Nessuna linea trovata nel punto cliccato. Riprova.")
 
+    def keyPressEvent(self, event):
+        if event.key() == _Key_Escape:
+            print("[LINEA] Operazione annullata dall'utente (ESC).")
+            qgis_iface.actionPan().trigger()
+            if self.on_completed:
+                self.on_completed()
+
     def deactivate(self):
         # Rimuovi rubberband buffer
+        if self.buffer_rb:
+            try:
+                self.canvas.scene().removeItem(self.buffer_rb)
+            except Exception:
+                pass
+            self.buffer_rb = None
+        super().deactivate()
+
+
+# =============================================================================
+# TOOL 4: SELEZIONA PUNTI (layer punti + buffer + dissolve)
+# =============================================================================
+
+class PointSelectTool(QgsMapTool):
+    """
+    Tool per selezionare un layer di punti sulla mappa.
+    Per TUTTI i punti del layer:
+    1. Crea buffer individuale attorno a ciascun punto
+    2. Dissolve i buffer in una singola geometria (filter_geom)
+    3. Scarica le particelle WFS nel bbox del dissolve
+    4. Post-filtra: mantiene solo le particelle che contengono almeno un punto
+    """
+
+    def __init__(self, canvas, buffer_distance=1, snap_tolerance=15,
+                 on_completed=None, espandi_catastale=False):
+        super().__init__(canvas)
+        self.canvas = canvas
+        self.buffer_distance = buffer_distance
+        self.snap_tolerance = snap_tolerance
+        self.buffer_rb = None
+        self.espandi_catastale = espandi_catastale
+        self.on_completed = on_completed
+
+    def _visualizza_buffer(self, buffer_geom, buffer_crs):
+        """Visualizza il buffer dissolto sulla mappa (viola)."""
+        if self.buffer_rb:
+            self.canvas.scene().removeItem(self.buffer_rb)
+            self.buffer_rb = None
+
+        project_crs = QgsProject.instance().crs()
+        if buffer_crs.authid() != project_crs.authid():
+            transform = QgsCoordinateTransform(
+                buffer_crs, project_crs, QgsProject.instance()
+            )
+            buffer_geom_proj = QgsGeometry(buffer_geom)
+            buffer_geom_proj.transform(transform)
+        else:
+            buffer_geom_proj = buffer_geom
+
+        self.buffer_rb = QgsRubberBand(self.canvas, _GEOM_POLYGON)
+        self.buffer_rb.setColor(QColor(123, 31, 162, 60))
+        self.buffer_rb.setStrokeColor(QColor(123, 31, 162, 200))
+        self.buffer_rb.setWidth(2)
+        self.buffer_rb.setToGeometry(buffer_geom_proj, None)
+        self.buffer_rb.show()
+
+    def canvasPressEvent(self, event):
+        click_map_point = self.toMapCoordinates(event.pos())
+        project_crs = QgsProject.instance().crs()
+
+        print(f"\n[DEBUG] Click alle coordinate progetto ({project_crs.authid()}): "
+              f"({click_map_point.x():.6f}, {click_map_point.y():.6f})")
+
+        # Cerca layer puntuali
+        point_layers = []
+        for lyr in QgsProject.instance().mapLayers().values():
+            if isinstance(lyr, QgsVectorLayer) and _is_point_layer(lyr):
+                point_layers.append(lyr.name())
+        print(f"[DEBUG] Layer puntuali trovati: "
+              f"{point_layers if point_layers else 'NESSUNO'}")
+
+        found = False
+        for layer in QgsProject.instance().mapLayers().values():
+            if not isinstance(layer, QgsVectorLayer):
+                continue
+            if not _is_point_layer(layer):
+                continue
+
+            layer_crs = layer.crs()
+
+            # Trasforma click nel CRS del layer
+            if project_crs.authid() != layer_crs.authid():
+                to_layer = QgsCoordinateTransform(
+                    project_crs, layer_crs, QgsProject.instance()
+                )
+                click_layer_point = to_layer.transform(click_map_point)
+            else:
+                click_layer_point = click_map_point
+
+            # Tolleranza di ricerca (parametrica)
+            tolerance = self.canvas.mapUnitsPerPixel() * self.snap_tolerance
+            if project_crs.authid() != layer_crs.authid():
+                tolerance_layer = tolerance * 2
+            else:
+                tolerance_layer = tolerance
+
+            search_rect = QgsRectangle(
+                click_layer_point.x() - tolerance_layer,
+                click_layer_point.y() - tolerance_layer,
+                click_layer_point.x() + tolerance_layer,
+                click_layer_point.y() + tolerance_layer,
+            )
+
+            request = QgsFeatureRequest().setFilterRect(search_rect)
+            click_geom = QgsGeometry.fromPointXY(click_layer_point)
+
+            # Trova punto più vicino
+            min_distance = float('inf')
+            closest_feature = None
+
+            for feat in layer.getFeatures(request):
+                geom = feat.geometry()
+                if geom.isNull() or geom.isEmpty():
+                    continue
+                distance = geom.distance(click_geom)
+                if distance < min_distance:
+                    min_distance = distance
+                    closest_feature = feat
+
+            if closest_feature is not None and min_distance <= tolerance_layer:
+                found = True
+                self._processa_layer_punti(layer)
+                return
+
+        if not found:
+            print("[PUNTI] Nessun layer punti trovato. "
+                  "Download particella nel punto cliccato.")
+            self._processa_click_singolo(click_map_point, project_crs)
+
+    def keyPressEvent(self, event):
+        if event.key() == _Key_Escape:
+            print("[PUNTI] Operazione annullata dall'utente (ESC).")
+            qgis_iface.actionPan().trigger()
+            if self.on_completed:
+                self.on_completed()
+
+    def _processa_layer_punti(self, layer):
+        """Processa i punti del layer (selezionati o tutti): buffer, dissolve, download, filtro."""
+        layer_crs = layer.crs()
+        layer_name = layer.name()
+        n_selected = layer.selectedFeatureCount()
+        n_features = layer.featureCount()
+
+        print(f"\n[PUNTI] Layer selezionato: {layer_name}")
+        print(f"        CRS: {layer_crs.authid()}")
+        print(f"        Punti nel layer: {n_features}")
+        print(f"        Punti selezionati: {n_selected}")
+
+        if n_features == 0:
+            QMessageBox.warning(
+                qgis_iface.mainWindow(),
+                "Layer vuoto",
+                f"Il layer '{layer_name}' non contiene feature.",
+            )
+            return
+
+        # Usa i punti selezionati se disponibili, altrimenti tutti
+        if n_selected > 0:
+            features = layer.selectedFeatures()
+            print(f"[PUNTI] Uso {n_selected} punti selezionati")
+        else:
+            features = layer.getFeatures()
+            print(f"[PUNTI] Nessuna selezione, uso tutti i {n_features} punti")
+
+        all_points = []
+        for feat in features:
+            geom = feat.geometry()
+            if geom.isNull() or geom.isEmpty():
+                continue
+            all_points.append(geom)
+
+        if not all_points:
+            QMessageBox.warning(
+                qgis_iface.mainWindow(),
+                "Nessun punto valido",
+                f"Il layer '{layer_name}' non contiene geometrie valide.",
+            )
+            return
+
+        print(f"[PUNTI] Punti validi: {len(all_points)}")
+
+        # Determina CRS di lavoro per il buffer
+        if layer_crs.isGeographic():
+            print(f"[PUNTI] CRS geografico rilevato ({layer_crs.authid()}).")
+            print("        Auto-riproiezione in zona UTM...")
+
+            # Calcola centroide medio per determinare zona UTM
+            sum_x, sum_y = 0.0, 0.0
+            for pt_geom in all_points:
+                centroid = pt_geom.centroid().asPoint()
+                sum_x += centroid.x()
+                sum_y += centroid.y()
+            avg_lon = sum_x / len(all_points)
+            avg_lat = sum_y / len(all_points)
+
+            utm_epsg = _determina_utm_epsg(avg_lon, avg_lat)
+            buffer_crs = QgsCoordinateReferenceSystem(utm_epsg)
+            print(f"        Centroide punti: ({avg_lon:.6f}, {avg_lat:.6f})")
+            print(f"        Zona UTM scelta: {utm_epsg}")
+
+            # Riproietta punti in UTM per il buffer
+            transform_to_utm = QgsCoordinateTransform(
+                layer_crs, buffer_crs, QgsProject.instance()
+            )
+            points_for_buffer = []
+            for pt_geom in all_points:
+                pt_utm = QgsGeometry(pt_geom)
+                pt_utm.transform(transform_to_utm)
+                points_for_buffer.append(pt_utm)
+        else:
+            buffer_crs = layer_crs
+            points_for_buffer = all_points
+            print(f"[PUNTI] CRS proiettato ({layer_crs.authid()}), "
+                  "nessuna riproiezione necessaria.")
+
+        # Buffer individuale + Dissolve
+        print(f"[PUNTI] Creazione buffer di {self.buffer_distance}m "
+              f"per {len(points_for_buffer)} punti...")
+
+        buffer_geoms = []
+        for pt_geom in points_for_buffer:
+            buf = pt_geom.buffer(self.buffer_distance, 8)
+            if not buf.isNull() and not buf.isEmpty():
+                buffer_geoms.append(buf)
+
+        if not buffer_geoms:
+            QMessageBox.warning(
+                qgis_iface.mainWindow(),
+                "Errore buffer",
+                "Impossibile creare i buffer per i punti.",
+            )
+            return
+
+        dissolved = QgsGeometry.unaryUnion(buffer_geoms)
+        if dissolved.isNull() or dissolved.isEmpty():
+            QMessageBox.warning(
+                qgis_iface.mainWindow(),
+                "Errore dissolve",
+                "Impossibile dissolvere i buffer.",
+            )
+            return
+
+        print("[PUNTI] Buffer dissolto creato.")
+        print(f"        Area dissolve: ~{dissolved.area():.1f} m²")
+
+        # Visualizza il buffer dissolto
+        self._visualizza_buffer(dissolved, buffer_crs)
+
+        # Trasforma bbox e dissolve in EPSG:6706
+        bbox = dissolved.boundingBox()
+        print(f"[PUNTI] BBox del dissolve ({buffer_crs.authid()}):")
+        print(f"        xMin={bbox.xMinimum():.7f}, yMin={bbox.yMinimum():.7f}")
+        print(f"        xMax={bbox.xMaximum():.7f}, yMax={bbox.yMaximum():.7f}")
+
+        min_lat, min_lon, max_lat, max_lon = trasforma_bbox_a_wfs(
+            bbox, buffer_crs
+        )
+
+        wfs_crs = QgsCoordinateReferenceSystem(WFS_CRS_ID)
+        if buffer_crs.authid() != wfs_crs.authid():
+            transform_to_wfs = QgsCoordinateTransform(
+                buffer_crs, wfs_crs, QgsProject.instance()
+            )
+            dissolved_wfs = QgsGeometry(dissolved)
+            dissolved_wfs.transform(transform_to_wfs)
+        else:
+            dissolved_wfs = dissolved
+
+        # Trasforma punti originali in WFS CRS per post-filtro
+        wfs_points = []
+        if layer_crs.authid() != wfs_crs.authid():
+            transform_pts_to_wfs = QgsCoordinateTransform(
+                layer_crs, wfs_crs, QgsProject.instance()
+            )
+            for pt_geom in all_points:
+                pt_wfs = QgsGeometry(pt_geom)
+                pt_wfs.transform(transform_pts_to_wfs)
+                wfs_points.append(pt_wfs)
+        else:
+            wfs_points = list(all_points)
+
+        # Download WFS con filtro
+        esegui_download_e_caricamento(
+            min_lat, min_lon, max_lat, max_lon,
+            filter_geom=dissolved_wfs,
+            layer_name=f"Particelle WFS (Punti buffer {self.buffer_distance} m)",
+            espandi_catastale=self.espandi_catastale,
+            post_filter_points=wfs_points,
+        )
+
+        qgis_iface.actionPan().trigger()
+        if self.on_completed:
+            self.on_completed()
+
+    def _processa_click_singolo(self, click_point, click_crs):
+        """Fallback: usa il punto cliccato per scaricare la particella sottostante."""
+        BUFFER_CLICK_M = 1  # buffer fisso 1 m
+
+        pt_geom = QgsGeometry.fromPointXY(click_point)
+
+        # Determina CRS proiettato per il buffer
+        if click_crs.isGeographic():
+            lon = click_point.x()
+            lat = click_point.y()
+            utm_epsg = _determina_utm_epsg(lon, lat)
+            buffer_crs = QgsCoordinateReferenceSystem(utm_epsg)
+            print(f"[PUNTI] Auto-riproiezione click in {utm_epsg}")
+
+            transform_to_utm = QgsCoordinateTransform(
+                click_crs, buffer_crs, QgsProject.instance()
+            )
+            pt_utm = QgsGeometry(pt_geom)
+            pt_utm.transform(transform_to_utm)
+        else:
+            buffer_crs = click_crs
+            pt_utm = pt_geom
+
+        # Buffer 1 m
+        buffer_geom = pt_utm.buffer(BUFFER_CLICK_M, 8)
+        self._visualizza_buffer(buffer_geom, buffer_crs)
+
+        # Trasforma in WFS CRS
+        bbox = buffer_geom.boundingBox()
+        min_lat, min_lon, max_lat, max_lon = trasforma_bbox_a_wfs(
+            bbox, buffer_crs
+        )
+
+        wfs_crs = QgsCoordinateReferenceSystem(WFS_CRS_ID)
+        if buffer_crs.authid() != wfs_crs.authid():
+            transform_to_wfs = QgsCoordinateTransform(
+                buffer_crs, wfs_crs, QgsProject.instance()
+            )
+            buffer_wfs = QgsGeometry(buffer_geom)
+            buffer_wfs.transform(transform_to_wfs)
+        else:
+            buffer_wfs = buffer_geom
+
+        # Punto originale in WFS CRS per post-filtro
+        if click_crs.authid() != wfs_crs.authid():
+            transform_pt_wfs = QgsCoordinateTransform(
+                click_crs, wfs_crs, QgsProject.instance()
+            )
+            pt_wfs = QgsGeometry(pt_geom)
+            pt_wfs.transform(transform_pt_wfs)
+        else:
+            pt_wfs = pt_geom
+
+        esegui_download_e_caricamento(
+            min_lat, min_lon, max_lat, max_lon,
+            filter_geom=buffer_wfs,
+            layer_name="Particelle WFS (click punto)",
+            espandi_catastale=self.espandi_catastale,
+            post_filter_points=[pt_wfs],
+        )
+
+        qgis_iface.actionPan().trigger()
+        if self.on_completed:
+            self.on_completed()
+
+    def deactivate(self):
         if self.buffer_rb:
             try:
                 self.canvas.scene().removeItem(self.buffer_rb)
@@ -1217,6 +1656,22 @@ class WfsCatastoDownloadParticelleBbox:
             tool = LineSelectTool(canvas, buffer_distance=buffer_m,
                                   on_completed=self._reopen_dialog,
                                   espandi_catastale=espandi)
+            canvas.setMapTool(tool)
+            self._active_tool = tool
+
+        elif dlg.scelta == "punti":
+            buffer_m = dlg.buffer_punti_distance
+            snap_px = dlg.snap_tolerance
+            print("\n  MODALITÀ: Seleziona Punti")
+            print("  >>> Clicca vicino a un punto in mappa")
+            print(f"  >>> Verrà creato un buffer di {buffer_m}m per ogni punto del layer")
+            print(f"  >>> Tolleranza snap: {snap_px} px")
+            print("  >>> Se nessun punto vicino: download particella nel click")
+            print("  >>> CRS geografico supportato (auto-riproiezione UTM)\n")
+            tool = PointSelectTool(canvas, buffer_distance=buffer_m,
+                                   snap_tolerance=snap_px,
+                                   on_completed=self._reopen_dialog,
+                                   espandi_catastale=espandi)
             canvas.setMapTool(tool)
             self._active_tool = tool
 
