@@ -30,6 +30,7 @@ from qgis.core import (
     QgsGeometry,
     QgsFeature,
     QgsField,
+    QgsExpression,
 )
 from qgis.gui import QgsMapTool, QgsRubberBand
 from qgis.PyQt.QtCore import Qt, QVariant, QTimer
@@ -44,6 +45,7 @@ from qgis.PyQt.QtWidgets import (
 from qgis.utils import iface as qgis_iface
 
 from .wfs_catasto_download_particelle_bbox_d import AvvisoDialog, SceltaModalitaDialog
+from .get_particella_wfs import get_particella_info
 
 
 # =============================================================================
@@ -1720,8 +1722,16 @@ class WfsCatastoDownloadParticelleBbox:
         self.iface.addPluginToVectorMenu(self.menu, action)
         self.actions.append(action)
 
+        # Registra la funzione personalizzata nel calcolatore di campi
+        QgsExpression.registerFunction(get_particella_info)
+        print("[OK] Funzione personalizzata 'get_particella_info' registrata")
+
     def unload(self):
         """Rimuove azione dalla toolbar e dal menu."""
+        # Deregistra la funzione personalizzata
+        QgsExpression.unregisterFunction('get_particella_info')
+        print("[OK] Funzione personalizzata 'get_particella_info' deregistrata")
+        
         for action in self.actions:
             self.iface.removePluginVectorMenu(self.menu, action)
             self.iface.removeToolBarIcon(action)
