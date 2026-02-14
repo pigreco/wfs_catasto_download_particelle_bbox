@@ -107,11 +107,15 @@ try:
     _DashLine = Qt.PenStyle.DashLine
     _DialogAccepted = QDialog.DialogCode.Accepted
     _Key_Escape = Qt.Key.Key_Escape
+    _LeftButton = Qt.MouseButton.LeftButton
+    _RightButton = Qt.MouseButton.RightButton
 except AttributeError:
     _WindowModal = Qt.WindowModal
     _DashLine = Qt.DashLine
     _DialogAccepted = QDialog.Accepted
     _Key_Escape = Qt.Key_Escape
+    _LeftButton = Qt.LeftButton
+    _RightButton = Qt.RightButton
 
 
 # =============================================================================
@@ -1002,6 +1006,10 @@ class LineSelectTool(QgsMapTool):
         self.buffer_rb = None  # Rubberband per visualizzare il buffer
         self.espandi_catastale = espandi_catastale
         self.on_completed = on_completed
+        # Stato per modalità disegno polilinea
+        self._draw_points = []  # Vertici della polilinea in coordinate mappa
+        self._draw_rb = None    # Rubberband per la polilinea in costruzione
+        self._drawing = False   # True quando si sta disegnando
 
     def _visualizza_buffer(self, buffer_geom, buffer_crs):
         """Visualizza il buffer sulla mappa."""
@@ -1029,10 +1037,146 @@ class LineSelectTool(QgsMapTool):
         self.buffer_rb.setToGeometry(buffer_geom_proj, None)
         self.buffer_rb.show()
 
+    def _esegui_download_da_linea(self, line_geom, geom_crs):
+        """Crea buffer dalla linea ed esegue il download WFS."""
+        buffer_geom = line_geom.buffer(self.buffer_distance, 8)
+
+        print(f"[BUFFER] Creato buffer di {self.buffer_distance}m")
+        print(f"         Area buffer: ~{buffer_geom.area():.1f} m²")
+
+        # Visualizza il buffer sulla mappa
+        self._visualizza_buffer(buffer_geom, geom_crs)
+
+        # Estrai bbox dal buffer
+        bbox = buffer_geom.boundingBox()
+        print(f"[BUFFER] BBox del buffer ({geom_crs.authid()}):")
+        print(f"         xMin={bbox.xMinimum():.7f}, yMin={bbox.yMinimum():.7f}")
+        print(f"         xMax={bbox.xMaximum():.7f}, yMax={bbox.yMaximum():.7f}")
+
+        # Trasforma bbox e buffer per WFS
+        print(f"\n[CRS] CRS del layer sorgente: {geom_crs.authid()}")
+        min_lat, min_lon, max_lat, max_lon = trasforma_bbox_a_wfs(bbox, geom_crs)
+
+        # Trasforma il buffer nel CRS WFS per il filtering
+        wfs_crs = QgsCoordinateReferenceSystem(WFS_CRS_ID)
+        if geom_crs.authid() != wfs_crs.authid():
+            transform_to_wfs = QgsCoordinateTransform(
+                geom_crs, wfs_crs, QgsProject.instance()
+            )
+            buffer_geom_wfs = QgsGeometry(buffer_geom)
+            buffer_geom_wfs.transform(transform_to_wfs)
+        else:
+            buffer_geom_wfs = buffer_geom
+
+        # Esegui download con filtro buffer
+        esegui_download_e_caricamento(
+            min_lat, min_lon, max_lat, max_lon,
+            filter_geom=buffer_geom_wfs,
+            layer_name=f"Particelle WFS (Linea buffer {self.buffer_distance} m)",
+            espandi_catastale=self.espandi_catastale
+        )
+
+        qgis_iface.actionPan().trigger()
+        if self.on_completed:
+            self.on_completed()
+
+    def _reset_disegno(self):
+        """Resetta lo stato di disegno polilinea."""
+        self._draw_points = []
+        self._drawing = False
+        if self._draw_rb:
+            try:
+                self.canvas.scene().removeItem(self._draw_rb)
+            except Exception:
+                pass
+            self._draw_rb = None
+        qgis_iface.statusBarIface().clearMessage()
+
+    def _aggiorna_rubber_band(self, cursor_point=None):
+        """Aggiorna il rubber band della polilinea in costruzione."""
+        if self._draw_rb:
+            try:
+                self.canvas.scene().removeItem(self._draw_rb)
+            except Exception:
+                pass
+            self._draw_rb = None
+
+        if len(self._draw_points) < 1:
+            return
+
+        self._draw_rb = QgsRubberBand(self.canvas, _GEOM_LINE)
+        self._draw_rb.setColor(QColor(255, 100, 0, 200))
+        self._draw_rb.setWidth(2)
+        self._draw_rb.setLineStyle(_DashLine)
+
+        points = list(self._draw_points)
+        if cursor_point:
+            points.append(cursor_point)
+
+        for pt in points:
+            self._draw_rb.addPoint(pt)
+        self._draw_rb.show()
+
+    def canvasMoveEvent(self, event):
+        """Aggiorna il segmento elastico durante il disegno."""
+        if not self._drawing or len(self._draw_points) < 1:
+            return
+        cursor_point = self.toMapCoordinates(event.pos())
+        self._aggiorna_rubber_band(cursor_point)
+
     def canvasPressEvent(self, event):
         click_map_point = self.toMapCoordinates(event.pos())
         project_crs = QgsProject.instance().crs()
 
+        # --- Click destro: termina la polilinea ---
+        if event.button() == _RightButton:
+            if self._drawing and len(self._draw_points) >= 2:
+                print(f"\n[LINEA] Polilinea disegnata con {len(self._draw_points)} vertici")
+
+                # Controlla se il CRS è proiettato
+                if project_crs.isGeographic():
+                    print(f"\n[ERRORE] Il CRS del progetto è geografico "
+                          f"({project_crs.authid()}).")
+                    QMessageBox.warning(
+                        qgis_iface.mainWindow(),
+                        "CRS non valido",
+                        f"Il CRS del progetto è geografico "
+                        f"({project_crs.authid()}).\n\n"
+                        f"Per calcolare correttamente il buffer di "
+                        f"{self.buffer_distance}m, "
+                        f"imposta un CRS proiettato per il progetto "
+                        f"(es. EPSG:3857, UTM).",
+                    )
+                    self._reset_disegno()
+                    return
+
+                line_geom = QgsGeometry.fromPolylineXY(self._draw_points)
+                self._reset_disegno()
+                self._esegui_download_da_linea(line_geom, project_crs)
+            elif self._drawing:
+                print("[LINEA] Servono almeno 2 punti per completare la polilinea.")
+                qgis_iface.statusBarIface().showMessage(
+                    "Servono almeno 2 punti. Click sinistro per aggiungere vertici.",
+                    3000
+                )
+            return
+
+        # --- Click sinistro ---
+        # Se siamo già in modalità disegno, aggiungi vertice
+        if self._drawing:
+            self._draw_points.append(QgsPointXY(click_map_point))
+            self._aggiorna_rubber_band()
+            n = len(self._draw_points)
+            print(f"[LINEA] Vertice {n} aggiunto: "
+                  f"({click_map_point.x():.6f}, {click_map_point.y():.6f})")
+            qgis_iface.statusBarIface().showMessage(
+                f"Vertici: {n} | Click sinistro: aggiungi | "
+                f"Click destro: termina | ESC: annulla",
+                0
+            )
+            return
+
+        # --- Prima prova a selezionare una linea esistente ---
         print(f"\n[DEBUG] Click alle coordinate progetto ({project_crs.authid()}): "
               f"({click_map_point.x():.6f}, {click_map_point.y():.6f})")
 
@@ -1125,59 +1269,33 @@ class LineSelectTool(QgsMapTool):
                 print(f"                Feature ID: {feat_id}")
                 print(f"                CRS del layer: {layer_crs.authid()}")
 
-                # Crea buffer
                 line_geom = closest_feature.geometry()
-                buffer_geom = line_geom.buffer(self.buffer_distance, 8)
-
-                print(f"[BUFFER] Creato buffer di {self.buffer_distance}m")
-                print(f"         Area buffer: ~{buffer_geom.area():.1f} m²")
-
-                # Visualizza il buffer sulla mappa
-                self._visualizza_buffer(buffer_geom, layer_crs)
-
-                # Estrai bbox dal buffer
-                bbox = buffer_geom.boundingBox()
-                print(f"[BUFFER] BBox del buffer ({layer_crs.authid()}):")
-                print(f"         xMin={bbox.xMinimum():.7f}, yMin={bbox.yMinimum():.7f}")
-                print(f"         xMax={bbox.xMaximum():.7f}, yMax={bbox.yMaximum():.7f}")
-
-                # Trasforma bbox e buffer per WFS
-                print(f"\n[CRS] CRS del layer sorgente: {layer_crs.authid()}")
-                min_lat, min_lon, max_lat, max_lon = trasforma_bbox_a_wfs(bbox, layer_crs)
-
-                # Trasforma il buffer nel CRS WFS per il filtering
-                wfs_crs = QgsCoordinateReferenceSystem(WFS_CRS_ID)
-                if layer_crs.authid() != wfs_crs.authid():
-                    transform_to_wfs = QgsCoordinateTransform(
-                        layer_crs, wfs_crs, QgsProject.instance()
-                    )
-                    buffer_geom_wfs = QgsGeometry(buffer_geom)
-                    buffer_geom_wfs.transform(transform_to_wfs)
-                else:
-                    buffer_geom_wfs = buffer_geom
-
-                # Esegui download con filtro buffer
-                esegui_download_e_caricamento(
-                    min_lat, min_lon, max_lat, max_lon,
-                    filter_geom=buffer_geom_wfs,
-                    layer_name=f"Particelle WFS (Linea buffer {self.buffer_distance} m)",
-                    espandi_catastale=self.espandi_catastale
-                )
-
-                qgis_iface.actionPan().trigger()
-                if self.on_completed:
-                    self.on_completed()
+                self._esegui_download_da_linea(line_geom, layer_crs)
                 return
 
+        # --- Nessuna linea trovata: entra in modalità disegno ---
         if not found:
-            print("[LINEA] Nessuna linea trovata nel punto cliccato. Riprova.")
+            self._drawing = True
+            self._draw_points = [QgsPointXY(click_map_point)]
+            self._aggiorna_rubber_band()
+            print(f"[LINEA] Nessuna linea trovata. Modalità disegno polilinea attivata.")
+            print(f"[LINEA] Vertice 1: ({click_map_point.x():.6f}, {click_map_point.y():.6f})")
+            qgis_iface.statusBarIface().showMessage(
+                "Vertici: 1 | Click sinistro: aggiungi | "
+                "Click destro: termina | ESC: annulla",
+                0
+            )
 
     def keyPressEvent(self, event):
         if event.key() == _Key_Escape:
-            print("[LINEA] Operazione annullata dall'utente (ESC).")
-            qgis_iface.actionPan().trigger()
-            if self.on_completed:
-                self.on_completed()
+            if self._drawing:
+                print("[LINEA] Disegno polilinea annullato (ESC).")
+                self._reset_disegno()
+            else:
+                print("[LINEA] Operazione annullata dall'utente (ESC).")
+                qgis_iface.actionPan().trigger()
+                if self.on_completed:
+                    self.on_completed()
 
     def deactivate(self):
         # Rimuovi rubberband buffer
@@ -1187,6 +1305,15 @@ class LineSelectTool(QgsMapTool):
             except Exception:
                 pass
             self.buffer_rb = None
+        # Rimuovi rubberband disegno polilinea
+        if self._draw_rb:
+            try:
+                self.canvas.scene().removeItem(self._draw_rb)
+            except Exception:
+                pass
+            self._draw_rb = None
+        self._draw_points = []
+        self._drawing = False
         super().deactivate()
 
 

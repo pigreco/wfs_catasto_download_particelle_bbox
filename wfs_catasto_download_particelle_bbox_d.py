@@ -28,13 +28,11 @@ from qgis.PyQt.QtWidgets import (
 try:
     _WinHelpHint = Qt.WindowType.WindowContextHelpButtonHint
     _WinCloseHint = Qt.WindowType.WindowCloseButtonHint
-    _WinStaysOnTop = Qt.WindowType.WindowStaysOnTopHint
     _AlignCenter = Qt.AlignmentFlag.AlignCenter
     _RichText = Qt.TextFormat.RichText
 except AttributeError:
     _WinHelpHint = Qt.WindowContextHelpButtonHint
     _WinCloseHint = Qt.WindowCloseButtonHint
-    _WinStaysOnTop = Qt.WindowStaysOnTopHint
     _AlignCenter = Qt.AlignCenter
     _RichText = Qt.RichText
 
@@ -89,7 +87,7 @@ class AvvisoDialog(QDialog):
 
         testo_avviso = QLabel(
             "Questo plugin consente di scaricare le particelle catastali "
-            "dal servizio WFS dell'Agenzia delle Entrate (INSPIRE).<br><br>"
+            "dal servizio WFS dell'<a href=\"https://www.agenziaentrate.gov.it/portale/cartografia-catastale-wfs\">Agenzia delle Entrate</a> (INSPIRE) disponibile con licenza <a href=\"https://creativecommons.org/licenses/by/4.0/deed.it\">CC-BY 4.0</a>.<br><br>"
             "Si raccomanda un uso <b>responsabile</b> e <b>moderato</b> del plugin. "
             "Il download massivo o ripetuto di grandi quantit\u00e0 di dati "
             "potrebbe compromettere la disponibilit\u00e0 del servizio WFS "
@@ -106,6 +104,7 @@ class AvvisoDialog(QDialog):
             "dell'Agenzia delle Entrate."
         )
         testo_avviso.setTextFormat(_RichText)
+        testo_avviso.setOpenExternalLinks(True)
         testo_avviso.setWordWrap(True)
         testo_avviso.setStyleSheet("font-size: 12px;")
         scroll_layout.addWidget(testo_avviso)
@@ -186,7 +185,6 @@ class SceltaModalitaDialog(QDialog):
         self.setWindowFlags(
             self.windowFlags()
             & ~_WinHelpHint
-            | _WinStaysOnTop
         )
 
         layout = QVBoxLayout()
@@ -194,12 +192,18 @@ class SceltaModalitaDialog(QDialog):
         layout.setContentsMargins(15, 15, 15, 15)
 
         # Titolo
-        titolo = QLabel("Download Particelle Catastali WFS")
+        titolo = QLabel(
+            'Download Particelle Catastali WFS '
+            '(<a href="https://creativecommons.org/licenses/by/4.0/deed.it">'
+            'CC-BY 4.0</a>)'
+        )
         font_titolo = QFont()
         font_titolo.setPointSize(13)
         font_titolo.setBold(True)
         titolo.setFont(font_titolo)
         titolo.setAlignment(_AlignCenter)
+        titolo.setTextFormat(_RichText)
+        titolo.setOpenExternalLinks(True)
         layout.addWidget(titolo)
 
         # Sottotitolo
@@ -318,13 +322,13 @@ class SceltaModalitaDialog(QDialog):
 
     def _cell_linea(self, svg_w, svg_h):
         """Cella (1,0): Seleziona Linea con buffer."""
-        group = QGroupBox("Seleziona Linea")
+        group = QGroupBox("Seleziona o disegna Linea")
         group.setStyleSheet(self._CELL_STYLE)
         gl = QVBoxLayout()
 
         gl.addWidget(self._svg_label("sketches_line.svg", svg_w, svg_h))
 
-        desc = QLabel("Clicca su una linea per scaricare")
+        desc = QLabel("Clicca su una linea o disegna una polilinea")
         desc.setWordWrap(True)
         desc.setStyleSheet("font-weight: normal; font-size: 10px;")
         desc.setAlignment(_AlignCenter)
@@ -349,7 +353,7 @@ class SceltaModalitaDialog(QDialog):
 
         gl.addStretch()
 
-        btn = QPushButton("Seleziona Linea")
+        btn = QPushButton("Seleziona o disegna Linea")
         btn.setMinimumHeight(34)
         btn.setStyleSheet(
             "QPushButton { background-color: #FF6D00; color: white; "
