@@ -1,18 +1,33 @@
 # WFS Catasto Download Particelle BBox
 
-Plugin per QGIS che consente di scaricare le particelle catastali dal servizio WFS dell'Agenzia delle Entrate (INSPIRE).
+Plugin per QGIS che consente di scaricare le particelle catastali dal servizio WFS dell'[Agenzia delle Entrate](https://www.agenziaentrate.gov.it/portale/cartografia-catastale-wfs) (INSPIRE) disponibile con licenza [CC-BY 4.0](https://creativecommons.org/licenses/by/4.0/deed.it).
 
 ![Panoramica del plugin in QGIS](./screen.png)
 
 ## Funzionalità
 
-Tre modalità di selezione dell'area di interesse:
+Quattro modalità di selezione dell'area di interesse:
 
 1. **Disegna BBox** - Clicca due punti sulla mappa per disegnare un rettangolo che definisce l'area di download.
 2. **Seleziona Poligono** - Clicca su un poligono esistente in mappa per estrarne automaticamente il bounding box. Se l'area è grande, viene suddivisa in tile automaticamente.
-3. **Seleziona Linea** - Clicca su una linea nella mappa e crea un buffer personalizzabile (0-100m) per scaricare le particelle che lo intersecano. Il layer deve avere un CRS proiettato (metri).
+3. **Seleziona o disegna Linea** - Clicca su una linea esistente oppure disegna una polilinea direttamente sulla mappa (click sinistro per aggiungere vertici, click destro per terminare, ESC per annullare). Crea un buffer personalizzabile (0-100m) per scaricare le particelle che lo intersecano.
+4. **Seleziona Punti** - Clicca su un layer di punti (o direttamente in mappa) per scaricare le particelle che contengono i punti. Supporta selezione parziale e auto-riproiezione UTM per CRS geografici.
 
-### Opzione: Espandi riferimento catastale (v1.1.0)
+### Funzione per il calcolatore di campi (v1.4.2)
+
+Il plugin registra la funzione `get_particella_info($geometry)` nel gruppo **Catasto** del Field Calculator. Interroga il WFS e restituisce un array con:
+
+| Indice | Contenuto |
+|--------|-----------|
+| `[0]` | NATIONALCADASTRALREFERENCE |
+| `[1]` | Foglio |
+| `[2]` | LABEL (numero particella) |
+| `[3]` | Codice comune (ADMINISTRATIVEUNIT) |
+| `[4]` | Geometria WKT |
+| `[5]` | Sezione censuaria |
+| `[6]` | Allegato |
+
+### Opzione: Espandi riferimento catastale
 
 Nella sezione **Opzioni** della finestra di scelta modalità è disponibile il checkbox **"Espandi riferimento catastale"**. Quando attivato, il plugin analizza il campo `NATIONALCADASTRALREFERENCE` e ne estrae 4 nuovi attributi nel layer di output:
 
@@ -36,13 +51,15 @@ Per ulteriori dettagli sulla codifica, consultare l'articolo di [Andrea Borruso]
 
 - Download multi-tile con progress bar per aree estese
 - Deduplicazione automatica delle feature
-- Filtro spaziale per la modalità linea con buffer
+- Filtro spaziale per tutte le modalità
 - Espansione opzionale del riferimento catastale nazionale
+- GUI con illustrazioni SVG e griglia 2x2
+- Tasto ESC per annullare qualsiasi modalità
 - Compatibile con QGIS 3 (Qt5) e QGIS 4 (Qt6)
 
 ## Interfaccia
 
-Al primo avvio per sessione QGIS viene mostrato un avviso obbligatorio sull'uso responsabile del plugin. Dopo l'accettazione si accede alla finestra di scelta modalità, che resta in primo piano permettendo di navigare la mappa prima di selezionare la modalità.
+Al primo avvio per sessione QGIS viene mostrato un avviso obbligatorio sull'uso responsabile del plugin. Dopo l'accettazione si accede alla finestra di scelta modalità con griglia 2x2, che permette di navigare la mappa prima di selezionare la modalità.
 
 ![Finestra di avviso e scelta modalità](./screen2.png)
 
@@ -71,6 +88,16 @@ Si raccomanda un uso **responsabile** e **moderato** del plugin. Il download mas
 L'autore invita al rispetto dell'**etica professionale** e delle buone pratiche nell'utilizzo delle risorse pubbliche condivise: il servizio WFS è messo a disposizione dalla pubblica amministrazione per finalità istituzionali e professionali, non per lo scaricamento indiscriminato dei dati.
 
 L'autore declina ogni responsabilità per eventuali usi impropri del plugin o per conseguenze derivanti da un utilizzo non conforme alle condizioni del servizio WFS dell'Agenzia delle Entrate.
+
+## Changelog
+
+- **1.4.2** - Funzione `get_particella_info($geometry)` per il calcolatore di campi
+- **1.4.1** - Disegno polilinea nella modalità Linea, licenza CC-BY 4.0 cliccabile, link cliccabili nell'avviso, fix GUI in primo piano
+- **1.4.0** - Nuova modalità Seleziona Punti, GUI griglia 2x2, tasto ESC
+- **1.3.0** - Illustrazioni SVG nella GUI, icona SVG
+- **1.2.0** - Ottimizzazione filtro spaziale modalità Poligono
+- **1.1.0** - Espansione riferimento catastale (sezione, foglio, allegato, sviluppo)
+- **1.0.0** - Prima release
 
 ## Licenza
 
