@@ -21,6 +21,7 @@ from qgis.core import (
     Qgis,
     QgsProject,
     QgsVectorLayer,
+    QgsRasterLayer,
     QgsCoordinateReferenceSystem,
     QgsCoordinateTransform,
     QgsRectangle,
@@ -33,7 +34,7 @@ from qgis.core import (
     QgsExpression,
 )
 from qgis.gui import QgsMapTool, QgsRubberBand
-from qgis.PyQt.QtCore import Qt, QVariant, QTimer
+from qgis.PyQt.QtCore import Qt, QVariant, QTimer, QSettings
 from qgis.PyQt.QtGui import QColor, QIcon
 from qgis.PyQt.QtWidgets import (
     QAction,
@@ -136,6 +137,20 @@ PAUSA_SECONDI = 5
 # Distanza buffer in metri di default
 BUFFER_DISTANCE_M = 50
 
+# WMS Catasto
+WMS_BASE_URL = "https://wms.cartografia.agenziaentrate.gov.it/inspire/wms/ows01.php"
+WMS_LAYERS = [
+    "province",
+    "CP.CadastralZoning",
+    "acque",
+    "strade",
+    "vestizioni",
+    "fabbricati",
+    "CP.CadastralParcel",
+]
+WMS_CONNECTION_NAME = "Catasto AdE"
+WMS_LAYER_NAME = "Cartografia Catastale WMS AdE"
+
 
 # =============================================================================
 # FUNZIONI COMUNI
@@ -213,6 +228,68 @@ def _determina_utm_epsg(lon, lat):
     else:
         epsg = 32700 + zona
     return f"EPSG:{epsg}"
+
+
+def carica_wms_catasto():
+    """
+    Aggiunge la connessione WMS del Catasto al profilo QGIS (se non presente)
+    e carica un layer WMS combinato nel progetto corrente.
+    Il layer viene posizionato in fondo al pannello Layer, prima di eventuali basemap XYZ.
+    """
+    # Controlla se il layer WMS è già nel progetto
+    for layer in QgsProject.instance().mapLayers().values():
+        if layer.providerType() == "wms" and WMS_BASE_URL in layer.source():
+            print(f"[WMS] Layer WMS Catasto già presente nel progetto: {layer.name()}")
+            return
+
+    # Aggiungi connessione WMS in QSettings se non presente
+    settings = QSettings()
+    key_prefix = f"qgis/connections-wms/{WMS_CONNECTION_NAME}"
+    existing_url = settings.value(f"{key_prefix}/url", "")
+    if not existing_url:
+        settings.setValue(f"{key_prefix}/url", WMS_BASE_URL)
+        print(f"[WMS] Connessione '{WMS_CONNECTION_NAME}' aggiunta al profilo QGIS")
+    else:
+        print(f"[WMS] Connessione '{WMS_CONNECTION_NAME}' già presente nel profilo")
+
+    # Costruisci URI con tutti i layer combinati
+    layers_params = "&".join(f"layers={l}" for l in WMS_LAYERS)
+    styles_params = "&".join("styles=" for _ in WMS_LAYERS)
+    uri = (
+        f"contextualWMSLegend=0"
+        f"&crs=EPSG:6706"
+        f"&dpiMode=7"
+        f"&featureCount=10"
+        f"&format=image/png"
+        f"&{layers_params}"
+        f"&{styles_params}"
+        f"&url={WMS_BASE_URL}"
+    )
+
+    wms_layer = QgsRasterLayer(uri, WMS_LAYER_NAME, "wms")
+    if not wms_layer.isValid():
+        print("[WMS] ERRORE: impossibile caricare il layer WMS Catasto")
+        return
+
+    QgsProject.instance().addMapLayer(wms_layer, False)
+    root = QgsProject.instance().layerTreeRoot()
+
+    # Inserisci in fondo ma prima di eventuali mappe di sfondo (XYZ tiles)
+    children = root.children()
+    pos = len(children)  # default: ultima posizione
+    for i in range(len(children) - 1, -1, -1):
+        node = children[i]
+        if hasattr(node, "layer") and node.layer():
+            src = node.layer().source()
+            if "type=xyz" in src:
+                pos = i
+            else:
+                break
+        else:
+            break
+    root.insertLayer(pos, wms_layer)
+
+    print(f"[WMS] Layer '{WMS_LAYER_NAME}' caricato nel progetto")
 
 
 def calcola_griglia_tile(min_lat, min_lon, max_lat, max_lon, max_tile_km2):
@@ -308,7 +385,8 @@ def scarica_singolo_tile(min_lat, min_lon, max_lat, max_lon):
 def esegui_download_e_caricamento(min_lat, min_lon, max_lat, max_lon, filter_geom=None,
                                   layer_name="Particelle WFS",
                                   espandi_catastale=False,
-                                  post_filter_points=None):
+                                  post_filter_points=None,
+                                  carica_wms=False):
     """
     Gestisce il download WFS: singolo o multi-tile con progress bar.
 
@@ -744,6 +822,10 @@ def esegui_download_e_caricamento(min_lat, min_lon, max_lat, max_lon, filter_geo
     canvas.setExtent(extent_proj)
     canvas.refresh()
 
+    # Carica WMS Catasto se richiesto
+    if carica_wms:
+        carica_wms_catasto()
+
     # Riepilogo finale
     print("\n" + "=" * 60)
     print("  COMPLETATO!")
@@ -776,13 +858,15 @@ class BBoxDrawTool(QgsMapTool):
     clicca il secondo angolo per confermare e avviare il download.
     """
 
-    def __init__(self, canvas, on_completed=None, espandi_catastale=False):
+    def __init__(self, canvas, on_completed=None, espandi_catastale=False,
+                 carica_wms=False):
         super().__init__(canvas)
         self.canvas = canvas
         self.first_point = None
         self.preview_rb = None
         self.on_completed = on_completed
         self.espandi_catastale = espandi_catastale
+        self.carica_wms = carica_wms
         self._create_preview_rubberband()
 
     def _create_preview_rubberband(self):
@@ -835,7 +919,8 @@ class BBoxDrawTool(QgsMapTool):
             esegui_download_e_caricamento(
                 min_lat, min_lon, max_lat, max_lon,
                 layer_name="Particelle WFS (BBox)",
-                espandi_catastale=self.espandi_catastale
+                espandi_catastale=self.espandi_catastale,
+                carica_wms=self.carica_wms,
             )
 
             # Ripristina Pan e riapri dialog
@@ -875,11 +960,13 @@ class PolySelectTool(QgsMapTool):
     Estrae il bbox della geometria e avvia il download WFS.
     """
 
-    def __init__(self, canvas, on_completed=None, espandi_catastale=False):
+    def __init__(self, canvas, on_completed=None, espandi_catastale=False,
+                 carica_wms=False):
         super().__init__(canvas)
         self.canvas = canvas
         self.on_completed = on_completed
         self.espandi_catastale = espandi_catastale
+        self.carica_wms = carica_wms
 
     def canvasPressEvent(self, event):
         click_map_point = self.toMapCoordinates(event.pos())
@@ -968,7 +1055,8 @@ class PolySelectTool(QgsMapTool):
                     min_lat, min_lon, max_lat, max_lon,
                     filter_geom=poly_geom_wfs,
                     layer_name="Particelle WFS (Poligono)",
-                    espandi_catastale=self.espandi_catastale
+                    espandi_catastale=self.espandi_catastale,
+                    carica_wms=self.carica_wms,
                 )
 
                 qgis_iface.actionPan().trigger()
@@ -1001,12 +1089,13 @@ class LineSelectTool(QgsMapTool):
     """
 
     def __init__(self, canvas, buffer_distance=BUFFER_DISTANCE_M, on_completed=None,
-                 espandi_catastale=False):
+                 espandi_catastale=False, carica_wms=False):
         super().__init__(canvas)
         self.canvas = canvas
         self.buffer_distance = buffer_distance
         self.buffer_rb = None  # Rubberband per visualizzare il buffer
         self.espandi_catastale = espandi_catastale
+        self.carica_wms = carica_wms
         self.on_completed = on_completed
         # Stato per modalità disegno polilinea
         self._draw_points = []  # Vertici della polilinea in coordinate mappa
@@ -1075,7 +1164,8 @@ class LineSelectTool(QgsMapTool):
             min_lat, min_lon, max_lat, max_lon,
             filter_geom=buffer_geom_wfs,
             layer_name=f"Particelle WFS (Linea buffer {self.buffer_distance} m)",
-            espandi_catastale=self.espandi_catastale
+            espandi_catastale=self.espandi_catastale,
+            carica_wms=self.carica_wms,
         )
 
         qgis_iface.actionPan().trigger()
@@ -1334,13 +1424,14 @@ class PointSelectTool(QgsMapTool):
     """
 
     def __init__(self, canvas, buffer_distance=1, snap_tolerance=15,
-                 on_completed=None, espandi_catastale=False):
+                 on_completed=None, espandi_catastale=False, carica_wms=False):
         super().__init__(canvas)
         self.canvas = canvas
         self.buffer_distance = buffer_distance
         self.snap_tolerance = snap_tolerance
         self.buffer_rb = None
         self.espandi_catastale = espandi_catastale
+        self.carica_wms = carica_wms
         self.on_completed = on_completed
 
     def _visualizza_buffer(self, buffer_geom, buffer_crs):
@@ -1598,6 +1689,7 @@ class PointSelectTool(QgsMapTool):
             layer_name=f"Particelle WFS (Punti buffer {self.buffer_distance} m)",
             espandi_catastale=self.espandi_catastale,
             post_filter_points=wfs_points,
+            carica_wms=self.carica_wms,
         )
 
         qgis_iface.actionPan().trigger()
@@ -1663,6 +1755,7 @@ class PointSelectTool(QgsMapTool):
             layer_name="Particelle WFS (click punto)",
             espandi_catastale=self.espandi_catastale,
             post_filter_points=[pt_wfs],
+            carica_wms=self.carica_wms,
         )
 
         qgis_iface.actionPan().trigger()
@@ -1761,6 +1854,7 @@ class WfsCatastoDownloadParticelleBbox:
         dlg = self._dlg
         canvas = self.iface.mapCanvas()
         espandi = dlg.espandi_catastale
+        wms = dlg.carica_wms
 
         if dlg.scelta == "disegna":
             print("\n  MODALITÀ: Disegna BBox")
@@ -1769,7 +1863,7 @@ class WfsCatastoDownloadParticelleBbox:
             print("  >>> Clicca per il SECONDO angolo")
             print("  >>> Il download partirà automaticamente\n")
             tool = BBoxDrawTool(canvas, on_completed=self._reopen_dialog,
-                                espandi_catastale=espandi)
+                                espandi_catastale=espandi, carica_wms=wms)
             canvas.setMapTool(tool)
             self._active_tool = tool
 
@@ -1779,7 +1873,7 @@ class WfsCatastoDownloadParticelleBbox:
             print("  >>> Il bbox verrà estratto e il CRS verificato")
             print("  >>> Il download partirà automaticamente\n")
             tool = PolySelectTool(canvas, on_completed=self._reopen_dialog,
-                                  espandi_catastale=espandi)
+                                  espandi_catastale=espandi, carica_wms=wms)
             canvas.setMapTool(tool)
             self._active_tool = tool
 
@@ -1792,7 +1886,7 @@ class WfsCatastoDownloadParticelleBbox:
             print("  >>> ATTENZIONE: Il layer deve avere un CRS proiettato (metri)\n")
             tool = LineSelectTool(canvas, buffer_distance=buffer_m,
                                   on_completed=self._reopen_dialog,
-                                  espandi_catastale=espandi)
+                                  espandi_catastale=espandi, carica_wms=wms)
             canvas.setMapTool(tool)
             self._active_tool = tool
 
@@ -1808,7 +1902,7 @@ class WfsCatastoDownloadParticelleBbox:
             tool = PointSelectTool(canvas, buffer_distance=buffer_m,
                                    snap_tolerance=snap_px,
                                    on_completed=self._reopen_dialog,
-                                   espandi_catastale=espandi)
+                                   espandi_catastale=espandi, carica_wms=wms)
             canvas.setMapTool(tool)
             self._active_tool = tool
 

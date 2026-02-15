@@ -6,6 +6,7 @@ Interfaccia grafica per la scelta della modalità di selezione area.
 Compatibile con QGIS 3 (Qt5) e QGIS 4 (Qt6).
 """
 
+import configparser
 import os
 
 from qgis.PyQt.QtCore import Qt
@@ -42,6 +43,14 @@ try:
 except AttributeError:
     _KeepAspectRatio = Qt.KeepAspectRatio
     _SmoothTransformation = Qt.SmoothTransformation
+
+
+def _plugin_version():
+    """Legge la versione dal file metadata.txt del plugin."""
+    meta_path = os.path.join(os.path.dirname(__file__), "metadata.txt")
+    cfg = configparser.ConfigParser()
+    cfg.read(meta_path)
+    return cfg.get("general", "version", fallback="")
 
 
 class AvvisoDialog(QDialog):
@@ -180,7 +189,11 @@ class SceltaModalitaDialog(QDialog):
         self._init_ui()
 
     def _init_ui(self):
-        self.setWindowTitle("WFS Catasto - Scelta modalità")
+        ver = _plugin_version()
+        titolo = "WFS Catasto - Scelta modalità"
+        if ver:
+            titolo += f"  v{ver}"
+        self.setWindowTitle(titolo)
         self.setMinimumWidth(500)
         self.setWindowFlags(
             self.windowFlags()
@@ -241,6 +254,12 @@ class SceltaModalitaDialog(QDialog):
         self.check_espandi_catastale.setStyleSheet("font-weight: normal;")
         self.check_espandi_catastale.setChecked(False)
         go_layout.addWidget(self.check_espandi_catastale)
+        self.check_carica_wms = QCheckBox(
+            "Carica WMS Cartografia Catastale"
+        )
+        self.check_carica_wms.setStyleSheet("font-weight: normal;")
+        self.check_carica_wms.setChecked(False)
+        go_layout.addWidget(self.check_carica_wms)
         group_opzioni.setLayout(go_layout)
         layout.addWidget(group_opzioni)
 
@@ -446,6 +465,10 @@ class SceltaModalitaDialog(QDialog):
     @property
     def espandi_catastale(self):
         return self.check_espandi_catastale.isChecked()
+
+    @property
+    def carica_wms(self):
+        return self.check_carica_wms.isChecked()
 
     # ---- Slot ----
 
