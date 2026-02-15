@@ -47,13 +47,25 @@ Il parsing segue il formato ufficiale dell'Agenzia delle Entrate `CCCCZFFFFAS`, 
 
 Per ulteriori dettagli sulla codifica, consultare l'articolo di [Andrea Borruso](https://medium.com/tantotanto/le-mappa-castali-diventano-finalmente-utilizzabili-821db2f84533#9547).
 
+### WMS Cartografia Catastale (v1.4.3)
+
+Nella sezione **Opzioni** è disponibile il checkbox **"Carica WMS Cartografia Catastale"**. Quando attivato, il plugin:
+
+- Aggiunge la connessione WMS dell'Agenzia delle Entrate al profilo QGIS (se non già presente)
+- Carica un layer WMS combinato con 7 sublayer: province, mappe (CP.CadastralZoning), acque, strade, vestizioni, fabbricati, particelle (CP.CadastralParcel)
+- Posiziona il layer in fondo al pannello Layer, sopra eventuali basemap XYZ (es. OpenStreetMap)
+
+Il layer WMS viene caricato una sola volta per progetto (se già presente viene saltato).
+
 ### Caratteristiche tecniche
 
 - Download multi-tile con progress bar per aree estese
 - Deduplicazione automatica delle feature
 - Filtro spaziale per tutte le modalità
 - Espansione opzionale del riferimento catastale nazionale
+- Caricamento opzionale WMS Cartografia Catastale AdE
 - GUI con illustrazioni SVG e griglia 2x2
+- Versione plugin visualizzata nel titolo della finestra
 - Tasto ESC per annullare qualsiasi modalità
 - Compatibile con QGIS 3 (Qt5) e QGIS 4 (Qt6)
 
@@ -91,6 +103,7 @@ L'autore declina ogni responsabilità per eventuali usi impropri del plugin o pe
 
 ## Changelog
 
+- **1.4.3** - WMS Cartografia Catastale AdE (7 sublayer), connessione WMS auto nel profilo, posizionamento sopra basemap XYZ, versione plugin nel titolo GUI
 - **1.4.2** - Funzione `get_particella_info($geometry)` per il calcolatore di campi
 - **1.4.1** - Disegno polilinea nella modalità Linea, licenza CC-BY 4.0 cliccabile, link cliccabili nell'avviso, fix GUI in primo piano
 - **1.4.0** - Nuova modalità Seleziona Punti, GUI griglia 2x2, tasto ESC
