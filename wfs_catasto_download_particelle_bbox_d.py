@@ -8,6 +8,7 @@ Compatibile con QGIS 3 (Qt5) e QGIS 4 (Qt6).
 
 import configparser
 import os
+import webbrowser
 
 from qgis.PyQt.QtCore import Qt
 from qgis.PyQt.QtGui import QFont, QPixmap
@@ -23,6 +24,7 @@ from qgis.PyQt.QtWidgets import (
     QCheckBox,
     QScrollArea,
     QWidget,
+    QMessageBox,
 )
 
 # Compatibilità Qt5 / Qt6 - enum scoped
@@ -263,6 +265,24 @@ class SceltaModalitaDialog(QDialog):
         group_opzioni.setLayout(go_layout)
         layout.addWidget(group_opzioni)
 
+        # --- Layout per i pulsanti in basso ---
+        bottom_layout = QHBoxLayout()
+        
+        # --- Pulsante Aiuto ---
+        btn_aiuto = QPushButton("❓ Aiuto")
+        btn_aiuto.setMinimumHeight(32)
+        btn_aiuto.setStyleSheet(
+            "QPushButton { background-color: #4CAF50; color: white; "
+            "font-size: 11px; font-weight: bold; border: none; "
+            "border-radius: 4px; }"
+            "QPushButton:hover { background-color: #45a049; }"
+        )
+        btn_aiuto.clicked.connect(self._on_aiuto)
+        bottom_layout.addWidget(btn_aiuto)
+        
+        # Spaziatore per spingere "Chiudi" a destra
+        bottom_layout.addStretch()
+
         # --- Pulsante chiudi ---
         btn_annulla = QPushButton("Chiudi")
         btn_annulla.setMinimumHeight(32)
@@ -273,7 +293,9 @@ class SceltaModalitaDialog(QDialog):
             "QPushButton:hover { background-color: #B71C1C; }"
         )
         btn_annulla.clicked.connect(self.reject)
-        layout.addWidget(btn_annulla)
+        bottom_layout.addWidget(btn_annulla)
+        
+        layout.addLayout(bottom_layout)
 
         self.setLayout(layout)
 
@@ -496,3 +518,114 @@ class SceltaModalitaDialog(QDialog):
     def _on_punti(self):
         self.scelta = "punti"
         self.accept()
+    
+    def _on_aiuto(self):
+        """Apre la pagina di aiuto del plugin su GitHub Pages."""
+        help_url = "https://pigreco.github.io/wfs_catasto_download_particelle_bbox/"
+        try:
+            webbrowser.open(help_url)
+        except Exception as e:
+            QMessageBox.information(
+                self,
+                "Aiuto Plugin",
+                f"Impossibile aprire il browser automaticamente.\n\n"
+                f"Visita manualmente: {help_url}\n\n"
+                f"Errore: {str(e)}"
+            )
+
+
+class AboutDialog(QDialog):
+    """Dialog con informazioni sul plugin."""
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setWindowTitle("Informazioni - WFS Catasto Download Particelle")
+        self.setWindowFlags(self.windowFlags() & ~_WinHelpHint | _WinCloseHint)
+        self.setMinimumSize(650, 500)
+        self.setMaximumSize(800, 700)
+        
+        # Layout principale
+        layout = QVBoxLayout()
+        
+        # Scroll area per contenuto
+        scroll = QScrollArea()
+        scroll.setWidgetResizable(True)
+        content_widget = QWidget()
+        content_layout = QVBoxLayout(content_widget)
+        
+        # Titolo
+        title_label = QLabel("<h2>WFS Catasto Download Particelle BBox</h2>")
+        title_label.setAlignment(_AlignCenter)
+        title_label.setTextFormat(_RichText)
+        content_layout.addWidget(title_label)
+        
+        # Versione
+        version = _plugin_version()
+        version_label = QLabel(f"<h3>Versione: {version}</h3>")
+        version_label.setAlignment(_AlignCenter)
+        version_label.setTextFormat(_RichText)
+        content_layout.addWidget(version_label)
+        
+        # Autore
+        author_label = QLabel("<b>Autore:</b> <a href=\"https://github.com/pigreco\">Salvatore Fiandaca</a>")
+        author_label.setTextFormat(_RichText)
+        author_label.setWordWrap(True)
+        author_label.setOpenExternalLinks(True)
+        content_layout.addWidget(author_label)
+        
+        content_layout.addWidget(QLabel(""))  # Spaziatura
+        
+        # Descrizione
+        desc_label = QLabel("<b>Descrizione:</b>")
+        desc_label.setTextFormat(_RichText)
+        content_layout.addWidget(desc_label)
+        
+        description = "Plugin per QGIS che consente di scaricare le particelle catastali dal servizio WFS dell'Agenzia delle Entrate (INSPIRE).<br><br><b>Quattro modalità di selezione dell'area di interesse:</b><br><br>&nbsp;&nbsp;• <b>Disegna BBox:</b><br>&nbsp;&nbsp;&nbsp;&nbsp;Clicca due punti sulla mappa per disegnare un rettangolo<br><br>&nbsp;&nbsp;• <b>Seleziona Poligono:</b><br>&nbsp;&nbsp;&nbsp;&nbsp;Clicca su un poligono esistente per estrarne il bounding box<br><br>&nbsp;&nbsp;• <b>Seleziona Linea:</b><br>&nbsp;&nbsp;&nbsp;&nbsp;Due modalità disponibili:<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;1. Clicca su una linea esistente nei layer<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;2. Disegna una nuova polilinea sulla mappa<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(click sinistro per aggiungere vertici, destro per terminare)<br>&nbsp;&nbsp;&nbsp;&nbsp;Applica automaticamente un buffer personalizzabile (0-100m)<br>&nbsp;&nbsp;&nbsp;&nbsp;per scaricare tutte le particelle che intersecano la zona bufferizzata<br><br>&nbsp;&nbsp;• <b>Seleziona Punti:</b><br>&nbsp;&nbsp;&nbsp;&nbsp;Tre modalità disponibili:<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;1. Clicca su un layer di punti esistente<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;2. Disegna/traccia un nuovo punto sulla mappa<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;3. Selezione diretta sulla mappa<br>&nbsp;&nbsp;&nbsp;&nbsp;Supporta buffer personalizzabile attorno ai punti, selezione parziale<br>&nbsp;&nbsp;&nbsp;&nbsp;del layer e auto-riproiezione UTM per CRS geografici<br><br><b>Funzionalità avanzate:</b><br><br>&nbsp;&nbsp;• Espansione riferimento catastale (sezione, foglio, allegato, sviluppo)<br>&nbsp;&nbsp;• Download multi-tile con progress bar<br>&nbsp;&nbsp;• Deduplicazione feature e filtro spaziale<br>&nbsp;&nbsp;• Compatibile con QGIS 3 (Qt5) e QGIS 4 (Qt6)"
+        desc_text = QLabel(description)
+        desc_text.setTextFormat(_RichText)
+        desc_text.setWordWrap(True)
+        content_layout.addWidget(desc_text)
+        
+        content_layout.addWidget(QLabel(""))  # Spaziatura
+        
+        # Licenza
+        license_label = QLabel("<b>Licenza:</b> Questo plugin è rilasciato sotto licenza open source.")
+        license_label.setTextFormat(_RichText)
+        license_label.setWordWrap(True)
+        content_layout.addWidget(license_label)
+        
+        content_layout.addWidget(QLabel(""))  # Spaziatura
+        
+        # Riferimenti e servizi
+        refs_label = QLabel("<b>Riferimenti e servizi utilizzati:</b>")
+        refs_label.setTextFormat(_RichText)
+        content_layout.addWidget(refs_label)
+        
+        refs_text = QLabel(
+            "• <b>Servizio WFS:</b><br>"
+            "&nbsp;&nbsp;<a href=\"https://wfs.cartografia.agenziaentrate.gov.it/inspire/wfs/owfs01.php\">https://wfs.cartografia.agenziaentrate.gov.it/inspire/wfs/owfs01.php</a><br><br>"
+            "• <b>Servizio WMS:</b><br>"
+            "&nbsp;&nbsp;<a href=\"https://wms.cartografia.agenziaentrate.gov.it/inspire/wms/ows01.php\">https://wms.cartografia.agenziaentrate.gov.it/inspire/wms/ows01.php</a><br><br>"
+            "• <b>Documentazione ufficiale:</b><br>"
+            "&nbsp;&nbsp;<a href=\"https://www.agenziaentrate.gov.it/portale/cartografia-catastale-wfs\">Cartografia Catastale WFS - Agenzia delle Entrate</a><br><br>"
+            "• <b>Licenza dati:</b> <a href=\"https://creativecommons.org/licenses/by/4.0/deed.it\">CC-BY 4.0</a>"
+        )
+        refs_text.setTextFormat(_RichText)
+        refs_text.setWordWrap(True)
+        refs_text.setOpenExternalLinks(True)
+        content_layout.addWidget(refs_text)
+        
+        content_layout.addStretch()
+        scroll.setWidget(content_widget)
+        layout.addWidget(scroll)
+        
+        # Pulsante Chiudi
+        button_layout = QHBoxLayout()
+        button_layout.addStretch()
+        
+        close_button = QPushButton("Chiudi")
+        close_button.clicked.connect(self.accept)
+        button_layout.addWidget(close_button)
+        
+        layout.addLayout(button_layout)
+        self.setLayout(layout)

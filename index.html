@@ -1,0 +1,451 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WFS Catasto Download Particelle BBox - Guida</title>
+    <style>
+        :root {
+            --primary-color: #2962FF;
+            --secondary-color: #00897B;
+            --accent-color: #FF6D00;
+            --text-color: #333;
+            --border-color: #ddd;
+            --background-color: #f9f9f9;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: var(--text-color);
+            background-color: var(--background-color);
+        }
+        
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        header {
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            color: white;
+            padding: 2rem 0;
+            margin-bottom: 2rem;
+            border-radius: 10px;
+        }
+        
+        h1 {
+            text-align: center;
+            margin-bottom: 0.5rem;
+            font-size: 2.5rem;
+        }
+        
+        .subtitle {
+            text-align: center;
+            font-size: 1.2rem;
+            opacity: 0.9;
+        }
+        
+        .nav {
+            background: white;
+            padding: 1rem;
+            border-radius: 8px;
+            margin-bottom: 2rem;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        
+        .nav ul {
+            list-style: none;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+        
+        .nav li {
+            flex: 1;
+            min-width: 200px;
+        }
+        
+        .nav a {
+            display: block;
+            padding: 0.5rem 1rem;
+            background: var(--background-color);
+            text-decoration: none;
+            color: var(--text-color);
+            border-radius: 5px;
+            border: 1px solid var(--border-color);
+            text-align: center;
+            transition: all 0.3s ease;
+        }
+        
+        .nav a:hover {
+            background: var(--primary-color);
+            color: white;
+        }
+        
+        .section {
+            background: white;
+            padding: 2rem;
+            margin-bottom: 2rem;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        h2 {
+            color: var(--primary-color);
+            margin-bottom: 1rem;
+            font-size: 1.8rem;
+            border-bottom: 2px solid var(--primary-color);
+            padding-bottom: 0.5rem;
+        }
+        
+        h3 {
+            color: var(--secondary-color);
+            margin: 1.5rem 0 1rem 0;
+            font-size: 1.3rem;
+        }
+        
+        .mode-card {
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin: 1rem 0;
+            background: #fafafa;
+        }
+        
+        .mode-card h4 {
+            color: var(--accent-color);
+            margin-bottom: 0.5rem;
+            font-size: 1.2rem;
+        }
+        
+        .steps {
+            background: #e8f4f8;
+            border-left: 4px solid var(--secondary-color);
+            padding: 1rem;
+            margin: 1rem 0;
+        }
+        
+        .steps h4 {
+            color: var(--secondary-color);
+            margin-bottom: 0.5rem;
+        }
+        
+        ol, ul {
+            margin: 1rem 0;
+            padding-left: 2rem;
+        }
+        
+        li {
+            margin: 0.5rem 0;
+        }
+        
+        .warning {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            color: #856404;
+            padding: 1rem;
+            border-radius: 5px;
+            margin: 1rem 0;
+        }
+        
+        .info {
+            background: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+            padding: 1rem;
+            border-radius: 5px;
+            margin: 1rem 0;
+        }
+        
+        code {
+            background: #f8f9fa;
+            border: 1px solid #e9ecef;
+            padding: 0.2rem 0.4rem;
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
+        }
+        
+        .footer {
+            text-align: center;
+            padding: 2rem;
+            background: white;
+            border-radius: 10px;
+            margin-top: 2rem;
+        }
+        
+        .footer a {
+            color: var(--primary-color);
+            text-decoration: none;
+        }
+        
+        .footer a:hover {
+            text-decoration: underline;
+        }
+        
+        @media (max-width: 768px) {
+            .nav ul {
+                flex-direction: column;
+            }
+            
+            h1 {
+                font-size: 2rem;
+            }
+            
+            .container {
+                padding: 10px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>📍 WFS Catasto Download Particelle BBox</h1>
+            <p class="subtitle">Guida Completa al Plugin QGIS</p>
+        </header>
+
+        <nav class="nav">
+            <ul>
+                <li><a href="#installazione">🔧 Installazione</a></li>
+                <li><a href="#modalita">🎯 Modalità d'uso</a></li>
+                <li><a href="#configurazioni">⚙️ Configurazioni</a></li>
+                <li><a href="#troubleshooting">🚨 Risoluzione Problemi</a></li>
+                <li><a href="#changelog">📋 Changelog</a></li>
+            </ul>
+        </nav>
+
+        <section id="installazione" class="section">
+            <h2>🔧 Installazione</h2>
+            <h3>Installazione da GitHub</h3>
+            <ol>
+                <li>Scarica l'ultima release dal <a href="https://github.com/pigreco/wfs_catasto_download_particelle_bbox/releases" target="_blank">repository GitHub</a></li>
+                <li>Estrai il file ZIP in una cartella temporanea</li>
+                <li>Copia la cartella <code>wfs_catasto_download_particelle_bbox</code> nella directory dei plugin QGIS:
+                    <ul>
+                        <li><strong>Windows:</strong> <code>%APPDATA%\QGIS\QGIS3\profiles\default\python\plugins\</code></li>
+                        <li><strong>Linux:</strong> <code>~/.local/share/QGIS/QGIS3/profiles/default/python/plugins/</code></li>
+                        <li><strong>macOS:</strong> <code>~/Library/Application Support/QGIS/QGIS3/profiles/default/python/plugins/</code></li>
+                    </ul>
+                </li>
+                <li>Riavvia QGIS</li>
+                <li>Attiva il plugin da <strong>Plugin → Gestisci e installa plugin → Installati</strong></li>
+            </ol>
+            
+            <div class="info">
+                <strong>💡 Tip:</strong> Il plugin comparirà nel menu <strong>Plugin</strong> con due opzioni: "Avvia Download Particelle Catastali" e "Informazioni".
+            </div>
+        </section>
+
+        <section id="modalita" class="section">
+            <h2>🎯 Modalità d'uso</h2>
+            
+            <div class="mode-card">
+                <h4>1. 📐 Disegna BBox</h4>
+                <p>Disegna direttamente sulla mappa un rettangolo per definire l'area di download.</p>
+                
+                <div class="steps">
+                    <h4>Procedura:</h4>
+                    <ol>
+                        <li>Seleziona "Disegna BBox sulla mappa"</li>
+                        <li>Clicca sulla mappa per il primo angolo</li>
+                        <li>Muovi il mouse per vedere l'anteprima del rettangolo</li>
+                        <li>Clicca per il secondo angolo</li>
+                        <li>Il download inizierà automaticamente</li>
+                    </ol>
+                </div>
+            </div>
+
+            <div class="mode-card">
+                <h4>2. 🔺 Seleziona Poligono</h4>
+                <p>Usa un poligono esistente in mappa per definire l'area di interesse.</p>
+                
+                <div class="steps">
+                    <h4>Procedura:</h4>
+                    <ol>
+                        <li>Assicurati di avere un layer poligonale caricato</li>
+                        <li>Seleziona "Seleziona Poligono sulla mappa"</li>
+                        <li>Clicca su un poligono nella mappa</li>
+                        <li>Il bounding box del poligono verrà estratto automaticamente</li>
+                        <li>Il download inizierà automaticamente</li>
+                    </ol>
+                </div>
+            </div>
+
+            <div class="mode-card">
+                <h4>3. 📏 Seleziona Asse Stradale</h4>
+                <p>Crea un buffer intorno a una linea per scaricare le particelle adiacenti.</p>
+                
+                <div class="steps">
+                    <h4>Procedura:</h4>
+                    <ol>
+                        <li>Imposta la distanza del buffer (0-100m)</li>
+                        <li>Seleziona "Seleziona Asse Stradale"</li>
+                        <li>Clicca su una linea nella mappa o disegna una polilinea</li>
+                        <li>Verrà creato automaticamente un buffer della distanza impostata</li>
+                        <li>Verranno scaricate solo le particelle che intersecano il buffer</li>
+                    </ol>
+                </div>
+                
+                <div class="warning">
+                    <strong>⚠️ Attenzione:</strong> Per la modalità asse stradale, il layer deve avere un CRS proiettato (metri).
+                </div>
+            </div>
+
+            <div class="mode-card">
+                <h4>4. 📍 Seleziona Punti</h4>
+                <p>Usa punti esistenti o disegnati per scaricare le particelle che li contengono.</p>
+                
+                <div class="steps">
+                    <h4>Procedura:</h4>
+                    <ol>
+                        <li>Carica un layer di punti o preparati a disegnare</li>
+                        <li>Il sistema supporta selezione parziale</li>
+                        <li>Auto-riproiezione UTM per CRS geografici</li>
+                        <li>Download automatico delle particelle contenenti i punti</li>
+                    </ol>
+                </div>
+            </div>
+        </section>
+
+        <section id="configurazioni" class="section">
+            <h2>⚙️ Configurazioni e Funzionalità Avanzate</h2>
+            
+            <h3>Espansione Riferimento Catastale</h3>
+            <p>Il plugin può estrarre dal campo <code>NATIONALCADASTRALREFERENCE</code> i seguenti campi strutturati:</p>
+            <ul>
+                <li><strong>Sezione:</strong> Codice sezione catastale</li>
+                <li><strong>Foglio:</strong> Numero foglio</li>
+                <li><strong>Allegato:</strong> Codice allegato</li>
+                <li><strong>Sviluppo:</strong> Codice sviluppo</li>
+            </ul>
+            <p><em>Formato: CCCCZFFFFAS (dove CCCC=comune, Z=sezione, FFFF=foglio, A=allegato, S=sviluppo)</em></p>
+
+            <h3>Download Multi-tile</h3>
+            <p>Per aree estese, il plugin suddivide automaticamente la richiesta in tile più piccoli:</p>
+            <ul>
+                <li>Progress bar per monitorare l'avanzamento</li>
+                <li>Deduplicazione automatica delle feature</li>
+                <li>Filtro spaziale per ottimizzare le prestazioni</li>
+                <li>Download intervallato per non sovraccaricare il servizio</li>
+            </ul>
+
+            <h3>Stile Automatico</h3>
+            <p>Il layer scaricato viene automaticamente stilizzato con regole basate sul contenuto:</p>
+            <ul>
+                <li><strong>Arancione:</strong> Particelle numeriche standard</li>
+                <li><strong>Grigio:</strong> Strade (STRADA)</li>
+                <li><strong>Blu:</strong> Acque (ACQUA)</li>
+            </ul>
+
+            <h3>WMS Cartografia Catastale</h3>
+            <p>Il plugin può caricare automaticamente il WMS dell'Agenzia delle Entrate con i seguenti layer:</p>
+            <ul>
+                <li>Province</li>
+                <li>Mappe catastali</li>
+                <li>Acque</li>
+                <li>Strade</li>
+                <li>Vestizioni</li>
+                <li>Fabbricati</li>
+                <li>Particelle</li>
+            </ul>
+        </section>
+
+        <section id="troubleshooting" class="section">
+            <h2>🚨 Risoluzione Problemi</h2>
+            
+            <h3>Errori Comuni</h3>
+            
+            <div class="warning">
+                <h4>Errore di CRS per Asse Stradale</h4>
+                <p><strong>Soluzione:</strong> Assicurati che il layer lineare abbia un sistema di coordinate proiettato (metri) e non geografico (gradi).</p>
+            </div>
+
+            <div class="warning">
+                <h4>Area troppo estesa</h4>
+                <p><strong>Soluzione:</strong> Il plugin suddivide automaticamente aree grandi in tile. Se persiste l'errore, riduci l'area di interesse.</p>
+            </div>
+
+            <div class="warning">
+                <h4>Timeout della connessione</h4>
+                <p><strong>Soluzioni:</strong></p>
+                <ul>
+                    <li>Verifica la connessione internet</li>
+                    <li>Riprova in un momento diverso (il servizio potrebbe essere sovraccarico)</li>
+                    <li>Riduci l'area di download</li>
+                </ul>
+            </div>
+
+            <h3>Limitazioni e Best Practices</h3>
+            <ul>
+                <li><strong>Uso responsabile:</strong> Evita download massivi ripetuti per non sovraccaricare il servizio WFS</li>
+                <li><strong>Compatibilità:</strong> Supporta QGIS 3 (Qt5) e QGIS 4 (Qt6)</li>
+                <li><strong>CRS:</strong> Il plugin gestisce automaticamente le riproiezioni necessarie</li>
+                <li><strong>Performance:</strong> Per aree molto grandi, considera di suddividere manualmente il download</li>
+            </ul>
+        </section>
+
+        <section id="changelog" class="section">
+            <h2>📋 Changelog</h2>
+            
+            <h3>Versione 1.4.6 (In Sviluppo)</h3>
+            <ul>
+                <li>Sistema help integrato con GitHub Pages</li>
+                <li>Bottone "❓ Aiuto" nell'interfaccia principale</li>
+                <li>Documentazione online completa e responsive</li>
+                <li>Navigazione interna e sezioni dettagliate</li>
+                <li>Troubleshooting avanzato per ogni modalità</li>
+            </ul>
+
+            <h3>Versione 1.4.5 (Rilasciata)</h3>
+            <ul>
+                <li>Aggiunto sottomenu nel menu Plugin</li>
+                <li>Dialog "Informazioni" con dettagli completi</li>
+                <li>Fix compatibilità Qt5/Qt6</li>
+                <li>Formattazione migliorata dell'interfaccia</li>
+            </ul>
+
+            <h3>Versione 1.4.4</h3>
+            <ul>
+                <li>Stile automatico rule-based per il layer particelle</li>
+                <li>Conteggio feature per categoria in legenda</li>
+            </ul>
+
+            <h3>Versione 1.4.3</h3>
+            <ul>
+                <li>Opzione per caricare WMS Cartografia Catastale</li>
+                <li>Connessione WMS automatica al profilo QGIS</li>
+                <li>Versione plugin nel titolo finestra</li>
+            </ul>
+
+            <h3>Versioni precedenti</h3>
+            <p>Vedi il <a href="https://github.com/pigreco/wfs_catasto_download_particelle_bbox/blob/master/README.md" target="_blank">changelog completo</a> nel repository GitHub.</p>
+        </section>
+
+        <footer class="footer">
+            <p>
+                📧 <strong>Autore:</strong> Salvatore Fiandaca<br>
+                🐙 <strong>GitHub:</strong> <a href="https://github.com/pigreco/wfs_catasto_download_particelle_bbox" target="_blank">pigreco/wfs_catasto_download_particelle_bbox</a><br>
+                🌐 <strong>WFS Service:</strong> <a href="https://wfs.cartografia.agenziaentrate.gov.it/inspire/wfs" target="_blank">Agenzia delle Entrate INSPIRE</a>
+            </p>
+            
+            <div class="info" style="margin-top: 1rem;">
+                <strong>📖 Documentazione Ufficiale:</strong><br>
+                - <a href="https://www.agenziaentrate.gov.it/portale/web/guest/schede/fabbricatiterreni/consultazione-cartografia-catastale/servizi-consultazione-cartografia" target="_blank">Servizi Consultazione Cartografia Catastale</a><br>
+                - <a href="https://www.agenziaentrate.gov.it/portale/documents/20143/233439/Manuale_tecnico_WMS_WFS_Cartografia_maggio2018.pdf" target="_blank">Manuale Tecnico WMS/WFS Cartografia (PDF)</a>
+            </div>
+            
+            <p style="margin-top: 1rem; font-size: 0.9em; color: #666;">
+                <em>Plugin rilasciato sotto licenza Open Source. Utilizza responsabilmente per non sovraccaricare i servizi dell'Agenzia delle Entrate.</em>
+            </p>
+        </footer>
+    </div>
+</body>
+</html>

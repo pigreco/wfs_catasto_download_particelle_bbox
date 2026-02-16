@@ -116,6 +116,8 @@ L'autore declina ogni responsabilità per eventuali usi impropri del plugin o pe
 
 ## Changelog
 
+- **1.4.6** - Sistema help integrato con GitHub Pages (bottone "Aiuto" → documentazione online completa)
+- **1.4.5** - Sottomenu nel menu Plugin con "Avvia Download Particelle Catastali" e "Informazioni", dialog AboutDialog completo con link GitHub e riferimenti WFS/WMS, fix compatibilità Qt5/Qt6
 - **1.4.4** - Stile automatico rule-based per particelle (arancione), strade (grigio), acque (blu) con conteggio feature in legenda
 - **1.4.3** - WMS Cartografia Catastale AdE (7 sublayer), connessione WMS auto nel profilo, posizionamento sopra basemap XYZ, versione plugin nel titolo GUI
 - **1.4.2** - Funzione `get_particella_info($geometry)` per il calcolatore di campi

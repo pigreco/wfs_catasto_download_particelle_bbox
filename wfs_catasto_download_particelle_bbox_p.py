@@ -47,7 +47,7 @@ from qgis.PyQt.QtWidgets import (
 )
 from qgis.utils import iface as qgis_iface
 
-from .wfs_catasto_download_particelle_bbox_d import AvvisoDialog, SceltaModalitaDialog
+from .wfs_catasto_download_particelle_bbox_d import AvvisoDialog, SceltaModalitaDialog, AboutDialog
 from .get_particella_wfs import get_particella_info
 
 
@@ -1847,7 +1847,7 @@ class WfsCatastoDownloadParticelleBbox:
         self._dlg = None
 
     def initGui(self):
-        """Crea azione nella toolbar e nel menu."""
+        """Crea azioni nella toolbar e nel menu Plugin."""
         self.toolbar = self.iface.addToolBar("WFS Catasto Download Particelle")
         self.toolbar.setObjectName("WfsCatastoDownloadParticelleBbox")
 
@@ -1857,32 +1857,51 @@ class WfsCatastoDownloadParticelleBbox:
         else:
             icon = QIcon(":/images/themes/default/mActionAddWfsLayer.svg")
 
-        action = QAction(
+        # Azione principale - Avvio plugin
+        action_main = QAction(
             icon,
-            "WFS Catasto Download Particelle",
+            "Avvia Download Particelle Catastali",
             self.iface.mainWindow(),
         )
-        action.setWhatsThis(
-            "Download particelle catastali dal WFS Agenzia delle Entrate"
+        action_main.setWhatsThis(
+            "Avvia il download delle particelle catastali dal WFS Agenzia delle Entrate"
         )
-        action.triggered.connect(self.run)
+        action_main.triggered.connect(self.run)
+        
+        # Azione informazioni
+        info_icon = QIcon(":/images/themes/default/mActionHelpContents.svg")
+        action_info = QAction(
+            info_icon,
+            "Informazioni",
+            self.iface.mainWindow(),
+        )
+        action_info.setWhatsThis(
+            "Informazioni sul plugin WFS Catasto Download Particelle"
+        )
+        action_info.triggered.connect(self.show_about)
 
-        self.toolbar.addAction(action)
-        self.iface.addPluginToVectorMenu(self.menu, action)
-        self.actions.append(action)
+        # Aggiungi alla toolbar (solo azione principale)
+        self.toolbar.addAction(action_main)
+        
+        # Aggiungi al menu Plugin con sottomenu
+        self.iface.addPluginToMenu(self.menu, action_main)
+        self.iface.addPluginToMenu(self.menu, action_info)
+        
+        self.actions.append(action_main)
+        self.actions.append(action_info)
 
         # Registra la funzione personalizzata nel calcolatore di campi
         QgsExpression.registerFunction(get_particella_info)
         print("[OK] Funzione personalizzata 'get_particella_info' registrata")
 
     def unload(self):
-        """Rimuove azione dalla toolbar e dal menu."""
+        """Rimuove azioni dalla toolbar e dal menu."""
         # Deregistra la funzione personalizzata
         QgsExpression.unregisterFunction('get_particella_info')
         print("[OK] Funzione personalizzata 'get_particella_info' deregistrata")
         
         for action in self.actions:
-            self.iface.removePluginVectorMenu(self.menu, action)
+            self.iface.removePluginMenu(self.menu, action)
             self.iface.removeToolBarIcon(action)
         if self.toolbar:
             del self.toolbar
@@ -1979,3 +1998,12 @@ class WfsCatastoDownloadParticelleBbox:
         print("=" * 60)
 
         self._show_dialog()
+        
+    def show_about(self):
+        """Mostra il dialog con le informazioni sul plugin."""
+        about_dlg = AboutDialog(self.iface.mainWindow())
+        # Compatibilità Qt5/Qt6
+        try:
+            about_dlg.exec()  # Qt6
+        except AttributeError:
+            about_dlg.exec_()  # Qt5
