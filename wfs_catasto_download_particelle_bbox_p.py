@@ -15,6 +15,7 @@ import os
 import tempfile
 import time
 import urllib.request
+import webbrowser
 from datetime import datetime
 
 from qgis.core import (
@@ -1879,6 +1880,18 @@ class WfsCatastoDownloadParticelleBbox:
             "Informazioni sul plugin WFS Catasto Download Particelle"
         )
         action_info.triggered.connect(self.show_about)
+        
+        # Azione guida
+        help_icon = QIcon(":/images/themes/default/mActionHelpContents.svg")
+        action_guida = QAction(
+            help_icon,
+            "Guida",
+            self.iface.mainWindow(),
+        )
+        action_guida.setWhatsThis(
+            "Apre la guida online del plugin WFS Catasto Download Particelle"
+        )
+        action_guida.triggered.connect(self.show_help)
 
         # Aggiungi alla toolbar (solo azione principale)
         self.toolbar.addAction(action_main)
@@ -1886,9 +1899,11 @@ class WfsCatastoDownloadParticelleBbox:
         # Aggiungi al menu Plugin con sottomenu
         self.iface.addPluginToMenu(self.menu, action_main)
         self.iface.addPluginToMenu(self.menu, action_info)
+        self.iface.addPluginToMenu(self.menu, action_guida)
         
         self.actions.append(action_main)
         self.actions.append(action_info)
+        self.actions.append(action_guida)
 
         # Registra la funzione personalizzata nel calcolatore di campi
         QgsExpression.registerFunction(get_particella_info)
@@ -2007,3 +2022,17 @@ class WfsCatastoDownloadParticelleBbox:
             about_dlg.exec()  # Qt6
         except AttributeError:
             about_dlg.exec_()  # Qt5
+            
+    def show_help(self):
+        """Apre la pagina di aiuto del plugin su GitHub Pages."""
+        url = "https://pigreco.github.io/wfs_catasto_download_particelle_bbox/"
+        try:
+            webbrowser.open(url)
+        except Exception as e:
+            QMessageBox.warning(
+                self.iface.mainWindow(),
+                "Aiuto Plugin",
+                f"Impossibile aprire la pagina di aiuto.\n\n"
+                f"Apri manualmente: {url}\n\n"
+                f"Errore: {str(e)}"
+            )

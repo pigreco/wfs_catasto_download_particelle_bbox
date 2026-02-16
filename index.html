@@ -118,6 +118,28 @@
             padding: 1.5rem;
             margin: 1rem 0;
             background: #fafafa;
+            display: flex;
+            gap: 1.5rem;
+            align-items: start;
+        }
+        
+        .mode-content {
+            flex: 1;
+        }
+        
+        .mode-image {
+            flex-shrink: 0;
+            width: 120px;
+            height: 120px;
+        }
+        
+        .mode-image svg {
+            width: 100%;
+            height: 100%;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            background: white;
+            padding: 8px;
         }
         
         .mode-card h4 {
@@ -248,69 +270,138 @@
             <h2>🎯 Modalità d'uso</h2>
             
             <div class="mode-card">
-                <h4>1. 📐 Disegna BBox</h4>
-                <p>Disegna direttamente sulla mappa un rettangolo per definire l'area di download.</p>
-                
-                <div class="steps">
-                    <h4>Procedura:</h4>
-                    <ol>
-                        <li>Seleziona "Disegna BBox sulla mappa"</li>
-                        <li>Clicca sulla mappa per il primo angolo</li>
-                        <li>Muovi il mouse per vedere l'anteprima del rettangolo</li>
-                        <li>Clicca per il secondo angolo</li>
-                        <li>Il download inizierà automaticamente</li>
-                    </ol>
+                <div class="mode-content">
+                    <h4>1. 📐 Disegna BBox</h4>
+                    <p>Disegna direttamente sulla mappa un rettangolo per definire l'area di download.</p>
+                    
+                    <div class="steps">
+                        <h4>Procedura:</h4>
+                        <ol>
+                            <li>Seleziona "Disegna BBox sulla mappa"</li>
+                            <li>Clicca sulla mappa per il primo angolo</li>
+                            <li>Muovi il mouse per vedere l'anteprima del rettangolo</li>
+                            <li>Clicca per il secondo angolo</li>
+                            <li>Il download inizierà automaticamente</li>
+                        </ol>
+                    </div>
+                </div>
+                <div class="mode-image">
+                    <svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+                        <defs>
+                            <pattern id="grid" width="20" height="20" patternUnits="userSpaceOnUse">
+                                <path d="M 20 0 L 0 0 0 20" fill="none" stroke="#e0e0e0" stroke-width="1"/>
+                            </pattern>
+                        </defs>
+                        <rect width="200" height="200" fill="url(#grid)"/>
+                        <rect x="50" y="60" width="100" height="80" fill="none" stroke="#2962FF" stroke-width="3" stroke-dasharray="8,4"/>
+                        <circle cx="50" cy="60" r="4" fill="#2962FF"/>
+                        <circle cx="150" cy="140" r="4" fill="#2962FF"/>
+                        <text x="30" y="55" font-size="10" fill="#666">Punto 1</text>
+                        <text x="155" y="150" font-size="10" fill="#666">Punto 2</text>
+                    </svg>
                 </div>
             </div>
 
             <div class="mode-card">
-                <h4>2. 🔺 Seleziona Poligono</h4>
-                <p>Usa un poligono esistente in mappa per definire l'area di interesse.</p>
-                
-                <div class="steps">
-                    <h4>Procedura:</h4>
-                    <ol>
-                        <li>Assicurati di avere un layer poligonale caricato</li>
-                        <li>Seleziona "Seleziona Poligono sulla mappa"</li>
-                        <li>Clicca su un poligono nella mappa</li>
-                        <li>Il bounding box del poligono verrà estratto automaticamente</li>
-                        <li>Il download inizierà automaticamente</li>
-                    </ol>
+                <div class="mode-content">
+                    <h4>2. 🔺 Seleziona Poligono</h4>
+                    <p>Usa un poligono esistente in mappa per definire l'area di interesse.</p>
+                    
+                    <div class="steps">
+                        <h4>Procedura:</h4>
+                        <ol>
+                            <li>Assicurati di avere un layer poligonale caricato</li>
+                            <li>Seleziona "Seleziona Poligono sulla mappa"</li>
+                            <li>Clicca su un poligono nella mappa</li>
+                            <li>Il bounding box del poligono verrà estratto automaticamente</li>
+                            <li>Il download inizierà automaticamente</li>
+                        </ol>
+                    </div>
+                </div>
+                <div class="mode-image">
+                    <svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+                        <defs>
+                            <pattern id="grid2" width="20" height="20" patternUnits="userSpaceOnUse">
+                                <path d="M 20 0 L 0 0 0 20" fill="none" stroke="#e0e0e0" stroke-width="1"/>
+                            </pattern>
+                        </defs>
+                        <rect width="200" height="200" fill="url(#grid2)"/>
+                        <polygon points="70,50 130,40 160,80 140,140 80,150 40,120 50,80" 
+                                fill="rgba(0,137,123,0.3)" stroke="#00897B" stroke-width="2"/>
+                        <rect x="40" y="40" width="120" height="110" fill="none" stroke="#2962FF" 
+                              stroke-width="2" stroke-dasharray="5,3" opacity="0.8"/>
+                        <text x="45" y="35" font-size="9" fill="#666">BBox estratto</text>
+                    </svg>
                 </div>
             </div>
 
             <div class="mode-card">
-                <h4>3. 📏 Seleziona Asse Stradale</h4>
-                <p>Crea un buffer intorno a una linea per scaricare le particelle adiacenti.</p>
-                
-                <div class="steps">
-                    <h4>Procedura:</h4>
-                    <ol>
-                        <li>Imposta la distanza del buffer (0-100m)</li>
-                        <li>Seleziona "Seleziona Asse Stradale"</li>
-                        <li>Clicca su una linea nella mappa o disegna una polilinea</li>
-                        <li>Verrà creato automaticamente un buffer della distanza impostata</li>
-                        <li>Verranno scaricate solo le particelle che intersecano il buffer</li>
-                    </ol>
+                <div class="mode-content">
+                    <h4>3. 📏 Seleziona Asse Stradale</h4>
+                    <p>Crea un buffer intorno a una linea per scaricare le particelle adiacenti.</p>
+                    
+                    <div class="steps">
+                        <h4>Procedura:</h4>
+                        <ol>
+                            <li>Imposta la distanza del buffer (0-100m)</li>
+                            <li>Seleziona "Seleziona Asse Stradale"</li>
+                            <li>Clicca su una linea nella mappa o disegna una polilinea</li>
+                            <li>Verrà creato automaticamente un buffer della distanza impostata</li>
+                            <li>Verranno scaricate solo le particelle che intersecano il buffer</li>
+                        </ol>
+                    </div>
+                    
+                    <div class="warning">
+                        <strong>⚠️ Attenzione:</strong> Per la modalità asse stradale, il layer deve avere un CRS proiettato (metri).
+                    </div>
                 </div>
-                
-                <div class="warning">
-                    <strong>⚠️ Attenzione:</strong> Per la modalità asse stradale, il layer deve avere un CRS proiettato (metri).
+                <div class="mode-image">
+                    <svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+                        <defs>
+                            <pattern id="grid3" width="20" height="20" patternUnits="userSpaceOnUse">
+                                <path d="M 20 0 L 0 0 0 20" fill="none" stroke="#e0e0e0" stroke-width="1"/>
+                            </pattern>
+                        </defs>
+                        <rect width="200" height="200" fill="url(#grid3)"/>
+                        <path d="M30,160 Q60,120 100,100 T170,60" fill="none" stroke="rgba(255,109,0,0.6)" stroke-width="12"/>
+                        <path d="M30,160 Q60,120 100,100 T170,60" fill="none" stroke="#FF6D00" stroke-width="3"/>
+                        <circle cx="30" cy="160" r="3" fill="#FF6D00"/>
+                        <circle cx="170" cy="60" r="3" fill="#FF6D00"/>
+                        <text x="10" y="180" font-size="9" fill="#666">Linea + Buffer</text>
+                    </svg>
                 </div>
             </div>
 
             <div class="mode-card">
-                <h4>4. 📍 Seleziona Punti</h4>
-                <p>Usa punti esistenti o disegnati per scaricare le particelle che li contengono.</p>
-                
-                <div class="steps">
-                    <h4>Procedura:</h4>
-                    <ol>
-                        <li>Carica un layer di punti o preparati a disegnare</li>
-                        <li>Il sistema supporta selezione parziale</li>
-                        <li>Auto-riproiezione UTM per CRS geografici</li>
-                        <li>Download automatico delle particelle contenenti i punti</li>
-                    </ol>
+                <div class="mode-content">
+                    <h4>4. 📍 Seleziona Punti</h4>
+                    <p>Usa punti esistenti o disegnati per scaricare le particelle che li contengono.</p>
+                    
+                    <div class="steps">
+                        <h4>Procedura:</h4>
+                        <ol>
+                            <li>Carica un layer di punti o preparati a disegnare</li>
+                            <li>Il sistema supporta selezione parziale</li>
+                            <li>Auto-riproiezione UTM per CRS geografici</li>
+                            <li>Download automatico delle particelle contenenti i punti</li>
+                        </ol>
+                    </div>
+                </div>
+                <div class="mode-image">
+                    <svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+                        <defs>
+                            <pattern id="grid4" width="20" height="20" patternUnits="userSpaceOnUse">
+                                <path d="M 20 0 L 0 0 0 20" fill="none" stroke="#e0e0e0" stroke-width="1"/>
+                            </pattern>
+                        </defs>
+                        <rect width="200" height="200" fill="url(#grid4)"/>
+                        <rect x="60" y="80" width="80" height="60" fill="none" stroke="#999" stroke-width="1" stroke-dasharray="3,2"/>
+                        <circle cx="80" cy="100" r="4" fill="#9C27B0"/>
+                        <circle cx="120" cy="120" r="4" fill="#9C27B0"/>
+                        <circle cx="100" cy="90" r="4" fill="#9C27B0"/>
+                        <text x="65" y="75" font-size="9" fill="#666">Particella</text>
+                        <text x="85" y="185" font-size="9" fill="#666">Punti nel layer</text>
+                    </svg>
                 </div>
             </div>
         </section>

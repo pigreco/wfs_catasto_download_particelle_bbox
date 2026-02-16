@@ -268,22 +268,7 @@ class SceltaModalitaDialog(QDialog):
         # --- Layout per i pulsanti in basso ---
         bottom_layout = QHBoxLayout()
         
-        # --- Pulsante Aiuto ---
-        btn_aiuto = QPushButton("❓ Aiuto")
-        btn_aiuto.setMinimumHeight(32)
-        btn_aiuto.setStyleSheet(
-            "QPushButton { background-color: #4CAF50; color: white; "
-            "font-size: 11px; font-weight: bold; border: none; "
-            "border-radius: 4px; }"
-            "QPushButton:hover { background-color: #45a049; }"
-        )
-        btn_aiuto.clicked.connect(self._on_aiuto)
-        bottom_layout.addWidget(btn_aiuto)
-        
-        # Spaziatore per spingere "Chiudi" a destra
-        bottom_layout.addStretch()
-
-        # --- Pulsante chiudi ---
+        # --- Pulsante Chiudi (3/4 dello spazio) ---
         btn_annulla = QPushButton("Chiudi")
         btn_annulla.setMinimumHeight(32)
         btn_annulla.setStyleSheet(
@@ -293,7 +278,19 @@ class SceltaModalitaDialog(QDialog):
             "QPushButton:hover { background-color: #B71C1C; }"
         )
         btn_annulla.clicked.connect(self.reject)
-        bottom_layout.addWidget(btn_annulla)
+        bottom_layout.addWidget(btn_annulla, 3)  # 3/4 dello spazio
+        
+        # --- Pulsante Aiuto (1/4 dello spazio) ---
+        btn_aiuto = QPushButton("❓ Guida")
+        btn_aiuto.setMinimumHeight(32)
+        btn_aiuto.setStyleSheet(
+            "QPushButton { background-color: #4CAF50; color: white; "
+            "font-size: 11px; font-weight: bold; border: none; "
+            "border-radius: 4px; }"
+            "QPushButton:hover { background-color: #45a049; }"
+        )
+        btn_aiuto.clicked.connect(self._on_aiuto)
+        bottom_layout.addWidget(btn_aiuto, 1)  # 1/4 dello spazio
         
         layout.addLayout(bottom_layout)
 
