@@ -57,11 +57,24 @@ Nella sezione **Opzioni** è disponibile il checkbox **"Carica WMS Cartografia C
 
 Il layer WMS viene caricato una sola volta per progetto (se già presente viene saltato).
 
+### Stile automatico particelle (v1.4.4)
+
+Il layer delle particelle viene caricato con uno **stile rule-based** automatico basato sul campo `LABEL`:
+
+| Tipo | Colore | Regola |
+|------|--------|--------|
+| Particella (numero) | Arancione | Tutti i valori numerici (ELSE) |
+| Strada | Grigio | `LABEL` contiene "STRADA" |
+| Acqua | Blu | `LABEL` contiene "ACQUA" |
+
+Il conteggio feature per categoria è visibile in legenda.
+
 ### Caratteristiche tecniche
 
 - Download multi-tile con progress bar per aree estese
 - Deduplicazione automatica delle feature
 - Filtro spaziale per tutte le modalità
+- Stile automatico rule-based (particelle/strade/acque) con conteggio in legenda
 - Espansione opzionale del riferimento catastale nazionale
 - Caricamento opzionale WMS Cartografia Catastale AdE
 - GUI con illustrazioni SVG e griglia 2x2
@@ -103,6 +116,7 @@ L'autore declina ogni responsabilità per eventuali usi impropri del plugin o pe
 
 ## Changelog
 
+- **1.4.4** - Stile automatico rule-based per particelle (arancione), strade (grigio), acque (blu) con conteggio feature in legenda
 - **1.4.3** - WMS Cartografia Catastale AdE (7 sublayer), connessione WMS auto nel profilo, posizionamento sopra basemap XYZ, versione plugin nel titolo GUI
 - **1.4.2** - Funzione `get_particella_info($geometry)` per il calcolatore di campi
 - **1.4.1** - Disegno polilinea nella modalità Linea, licenza CC-BY 4.0 cliccabile, link cliccabili nell'avviso, fix GUI in primo piano

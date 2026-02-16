@@ -32,6 +32,8 @@ from qgis.core import (
     QgsFeature,
     QgsField,
     QgsExpression,
+    QgsRuleBasedRenderer,
+    QgsFillSymbol,
 )
 from qgis.gui import QgsMapTool, QgsRubberBand
 from qgis.PyQt.QtCore import Qt, QVariant, QTimer, QSettings
@@ -102,6 +104,53 @@ def _is_point_layer(layer):
         return layer.geometryType() == Qgis.GeometryType.Point
     except AttributeError:
         return layer.geometryType() == 0
+
+
+def _applica_stile_particelle(layer):
+    """Applica stile rule-based al layer particelle in base al campo LABEL.
+
+    - Particelle numeriche → arancione
+    - STRADA → grigio
+    - ACQUA → blu
+    """
+    # Simbolo base (serve come root per il renderer)
+    root_rule = QgsRuleBasedRenderer.Rule(None)
+
+    # Regola STRADA → grigio
+    sym_strada = QgsFillSymbol.createSimple({
+        "color": "153,153,153,255",
+        "outline_color": "102,102,102,255",
+        "outline_width": "0.3",
+    })
+    rule_strada = QgsRuleBasedRenderer.Rule(sym_strada)
+    rule_strada.setLabel("Strada")
+    rule_strada.setFilterExpression('"LABEL" LIKE \'%STRADA%\'')
+    root_rule.appendChild(rule_strada)
+
+    # Regola ACQUA → blu
+    sym_acqua = QgsFillSymbol.createSimple({
+        "color": "74,144,217,255",
+        "outline_color": "44,95,138,255",
+        "outline_width": "0.3",
+    })
+    rule_acqua = QgsRuleBasedRenderer.Rule(sym_acqua)
+    rule_acqua.setLabel("Acqua")
+    rule_acqua.setFilterExpression('"LABEL" LIKE \'%ACQUA%\'')
+    root_rule.appendChild(rule_acqua)
+
+    # Regola ELSE (particelle numeriche) → arancione
+    sym_particella = QgsFillSymbol.createSimple({
+        "color": "255,140,0,255",
+        "outline_color": "204,112,0,255",
+        "outline_width": "0.3",
+    })
+    rule_particella = QgsRuleBasedRenderer.Rule(sym_particella)
+    rule_particella.setLabel("Particella")
+    rule_particella.setIsElse(True)
+    root_rule.appendChild(rule_particella)
+
+    renderer = QgsRuleBasedRenderer(root_rule)
+    layer.setRenderer(renderer)
 
 
 # Qt enum scoped (Qt6) vs flat (Qt5)
@@ -794,8 +843,15 @@ def esegui_download_e_caricamento(min_lat, min_lon, max_lat, max_lon, filter_geo
     mem_provider.addFeatures(new_features)
     mem_layer.updateExtents()
 
+    # Applica stile rule-based (arancione/grigio/blu)
+    _applica_stile_particelle(mem_layer)
+
     # Aggiungi al progetto
     QgsProject.instance().addMapLayer(mem_layer)
+    # Mostra conteggio feature per categoria in legenda
+    tree_layer = QgsProject.instance().layerTreeRoot().findLayer(mem_layer.id())
+    if tree_layer:
+        tree_layer.setCustomProperty("showFeatureCount", True)
     feat_count = mem_layer.featureCount()
 
     print(f"[OK] Layer temporaneo caricato con {feat_count} feature(s)")

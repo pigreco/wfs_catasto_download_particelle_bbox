@@ -6,7 +6,7 @@
 name=WFS Catasto Download Particelle BBox
 qgisMinimumVersion=3.0
 description=Download particelle catastali dal WFS dell'Agenzia delle Entrate tramite BBox, selezione poligono, linea con buffer o layer di punti.
-version=1.4.3
+version=1.4.4
 author=Salvatore Fiandaca
 email=pigrecoinfinito@gmail.com
 
@@ -30,6 +30,9 @@ repository=https://github.com/pigreco/wfs_catasto_download_particelle_bbox
 
 hasProcessingProvider=no
 changelog=
+    1.4.4 - Stile automatico rule-based per il layer particelle: arancione per particelle
+            numeriche, grigio per strade (STRADA), blu per acque (ACQUA).
+            Conteggio feature per categoria visibile in legenda.
     1.4.3 - Opzione per caricare il WMS Cartografia Catastale dell'Agenzia delle Entrate
             (province, mappe, acque, strade, vestizioni, fabbricati, particelle).
             Connessione WMS aggiunta automaticamente al profilo QGIS se non presente.
