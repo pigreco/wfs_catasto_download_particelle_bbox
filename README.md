@@ -116,6 +116,7 @@ L'autore declina ogni responsabilità per eventuali usi impropri del plugin o pe
 
 ## Changelog
 
+- **1.4.8** - Modalità Seleziona Punti: click singolo con accumulo feature nello stesso layer di sessione (append), deduplicazione cross-click, ESC affidabile con QShortcut
 - **1.4.7** - Miglioramenti interfaccia: riorganizzato layout bottoni ("Chiudi" 3/4 spazio, "Guida" 1/4), aggiunta voce "Guida" nel menu Plugin
 - **1.4.6** - Sistema help integrato con GitHub Pages (bottone "Aiuto" → documentazione online completa)
 - **1.4.5** - Sottomenu nel menu Plugin con "Avvia Download Particelle Catastali" e "Informazioni", dialog AboutDialog completo con link GitHub e riferimenti WFS/WMS, fix compatibilità Qt5/Qt6

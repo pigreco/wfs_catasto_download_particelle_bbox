@@ -240,7 +240,6 @@
                 <li><a href="#modalita">🎯 Modalità d'uso</a></li>
                 <li><a href="#configurazioni">⚙️ Configurazioni</a></li>
                 <li><a href="#troubleshooting">🚨 Risoluzione Problemi</a></li>
-                <li><a href="#changelog">📋 Changelog</a></li>
             </ul>
         </nav>
 
@@ -344,10 +343,12 @@
                     <div class="steps">
                         <h4>Procedura:</h4>
                         <ol>
-                            <li>Carica un layer di punti o preparati a disegnare</li>
-                            <li>Il sistema supporta selezione parziale</li>
+                            <li>Carica un layer di punti o preparati a cliccare in mappa</li>
+                            <li>Il sistema supporta selezione parziale dei punti</li>
                             <li>Auto-riproiezione UTM per CRS geografici</li>
                             <li>Download automatico delle particelle contenenti i punti</li>
+                            <li>Se non ci sono layer di punti, ogni click scarica la particella e la accumula nello stesso layer</li>
+                            <li>Premi <strong>ESC</strong> per terminare la sessione</li>
                         </ol>
                     </div>
                 </div>
@@ -432,43 +433,6 @@
                 <li><strong>CRS:</strong> Il plugin gestisce automaticamente le riproiezioni necessarie</li>
                 <li><strong>Performance:</strong> Per aree molto grandi, considera di suddividere manualmente il download</li>
             </ul>
-        </section>
-
-        <section id="changelog" class="section">
-            <h2>📋 Changelog</h2>
-            
-            <h3>Versione 1.4.6 (In Sviluppo)</h3>
-            <ul>
-                <li>Sistema help integrato con GitHub Pages</li>
-                <li>Bottone "❓ Aiuto" nell'interfaccia principale</li>
-                <li>Documentazione online completa e responsive</li>
-                <li>Navigazione interna e sezioni dettagliate</li>
-                <li>Troubleshooting avanzato per ogni modalità</li>
-            </ul>
-
-            <h3>Versione 1.4.5 (Rilasciata)</h3>
-            <ul>
-                <li>Aggiunto sottomenu nel menu Plugin</li>
-                <li>Dialog "Informazioni" con dettagli completi</li>
-                <li>Fix compatibilità Qt5/Qt6</li>
-                <li>Formattazione migliorata dell'interfaccia</li>
-            </ul>
-
-            <h3>Versione 1.4.4</h3>
-            <ul>
-                <li>Stile automatico rule-based per il layer particelle</li>
-                <li>Conteggio feature per categoria in legenda</li>
-            </ul>
-
-            <h3>Versione 1.4.3</h3>
-            <ul>
-                <li>Opzione per caricare WMS Cartografia Catastale</li>
-                <li>Connessione WMS automatica al profilo QGIS</li>
-                <li>Versione plugin nel titolo finestra</li>
-            </ul>
-
-            <h3>Versioni precedenti</h3>
-            <p>Vedi il <a href="https://github.com/pigreco/wfs_catasto_download_particelle_bbox/blob/master/README.md" target="_blank">changelog completo</a> nel repository GitHub.</p>
         </section>
 
         <footer class="footer">

@@ -38,13 +38,14 @@ from qgis.core import (
 )
 from qgis.gui import QgsMapTool, QgsRubberBand
 from qgis.PyQt.QtCore import Qt, QVariant, QTimer, QSettings
-from qgis.PyQt.QtGui import QColor, QIcon
+from qgis.PyQt.QtGui import QColor, QIcon, QKeySequence
 from qgis.PyQt.QtWidgets import (
     QAction,
     QDialog,
     QMessageBox,
     QProgressDialog,
     QApplication,
+    QShortcut,
 )
 from qgis.utils import iface as qgis_iface
 
@@ -436,7 +437,8 @@ def esegui_download_e_caricamento(min_lat, min_lon, max_lat, max_lon, filter_geo
                                   layer_name="Particelle WFS",
                                   espandi_catastale=False,
                                   post_filter_points=None,
-                                  carica_wms=False):
+                                  carica_wms=False,
+                                  append_to_layer=None):
     """
     Gestisce il download WFS: singolo o multi-tile con progress bar.
 
@@ -773,28 +775,62 @@ def esegui_download_e_caricamento(min_lat, min_lon, max_lat, max_lon, filter_geo
     # Tutte le feature vengono mantenute
     unique_features = dopo_dedup_id
 
-    # --- Crea layer temporaneo in memoria ---
-    print("\n--- Creazione layer temporaneo ---")
-    timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
-    layer_name = f"{layer_name}_{timestamp}"
-    geom_type_str = _wkb_display_string(layer_info["wkb_type"])
-    crs = layer_info["crs"]
-    mem_uri = f"{geom_type_str}?crs={crs.authid()}"
+    # --- Modalità append o creazione nuovo layer ---
+    is_append = (append_to_layer is not None
+                 and append_to_layer.isValid()
+                 and QgsProject.instance().mapLayer(append_to_layer.id()) is not None)
 
-    mem_layer = QgsVectorLayer(mem_uri, layer_name, "memory")
-    mem_provider = mem_layer.dataProvider()
+    if is_append:
+        # --- Append a layer esistente ---
+        mem_layer = append_to_layer
+        mem_provider = mem_layer.dataProvider()
+        crs = mem_layer.crs()
+        print(f"\n--- Append a layer esistente: {mem_layer.name()} ---")
+        print(f"    Feature già presenti: {mem_layer.featureCount()}")
 
-    # Copia campi originali + aggiungi campi segnalazione duplicati
-    original_fields = layer_info["fields"].toList()
-    original_fields.append(QgsField("geom_duplicata", QVariant.String))
-    original_fields.append(QgsField("gruppo_duplicato", QVariant.Int))
-    if espandi_catastale:
-        original_fields.append(QgsField("sezione", QVariant.String))
-        original_fields.append(QgsField("foglio", QVariant.Int))
-        original_fields.append(QgsField("allegato", QVariant.String))
-        original_fields.append(QgsField("sviluppo", QVariant.String))
-    mem_provider.addAttributes(original_fields)
-    mem_layer.updateFields()
+        # Deduplicazione cross-click: escludi feature già presenti (per gml_id)
+        existing_ids = set()
+        idx_gml_existing = mem_layer.fields().indexOf("gml_id")
+        if idx_gml_existing >= 0:
+            for feat in mem_layer.getFeatures():
+                gml_val = feat.attribute(idx_gml_existing)
+                if gml_val:
+                    existing_ids.add(gml_val)
+
+        idx_gml_source = layer_info["fields"].indexOf("gml_id")
+        pre_dedup = len(unique_features)
+        if existing_ids and idx_gml_source >= 0:
+            unique_features = [
+                f for f in unique_features
+                if f.attribute(idx_gml_source) not in existing_ids
+            ]
+            cross_dup = pre_dedup - len(unique_features)
+            if cross_dup > 0:
+                print(f"    Duplicati cross-click rimossi: {cross_dup}")
+
+    else:
+        # --- Crea layer temporaneo in memoria ---
+        print("\n--- Creazione layer temporaneo ---")
+        timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
+        layer_name = f"{layer_name}_{timestamp}"
+        geom_type_str = _wkb_display_string(layer_info["wkb_type"])
+        crs = layer_info["crs"]
+        mem_uri = f"{geom_type_str}?crs={crs.authid()}"
+
+        mem_layer = QgsVectorLayer(mem_uri, layer_name, "memory")
+        mem_provider = mem_layer.dataProvider()
+
+        # Copia campi originali + aggiungi campi segnalazione duplicati
+        original_fields = layer_info["fields"].toList()
+        original_fields.append(QgsField("geom_duplicata", QVariant.String))
+        original_fields.append(QgsField("gruppo_duplicato", QVariant.Int))
+        if espandi_catastale:
+            original_fields.append(QgsField("sezione", QVariant.String))
+            original_fields.append(QgsField("foglio", QVariant.Int))
+            original_fields.append(QgsField("allegato", QVariant.String))
+            original_fields.append(QgsField("sviluppo", QVariant.String))
+        mem_provider.addAttributes(original_fields)
+        mem_layer.updateFields()
 
     # Indici dei nuovi campi
     idx_geom_dup = mem_layer.fields().indexOf("geom_duplicata")
@@ -844,23 +880,31 @@ def esegui_download_e_caricamento(min_lat, min_lon, max_lat, max_lon, filter_geo
     mem_provider.addFeatures(new_features)
     mem_layer.updateExtents()
 
-    # Applica stile rule-based (arancione/grigio/blu)
-    _applica_stile_particelle(mem_layer)
+    if not is_append:
+        # Applica stile rule-based (arancione/grigio/blu)
+        _applica_stile_particelle(mem_layer)
 
-    # Aggiungi al progetto
-    QgsProject.instance().addMapLayer(mem_layer)
-    # Mostra conteggio feature per categoria in legenda
-    tree_layer = QgsProject.instance().layerTreeRoot().findLayer(mem_layer.id())
-    if tree_layer:
-        tree_layer.setCustomProperty("showFeatureCount", True)
+        # Aggiungi al progetto
+        QgsProject.instance().addMapLayer(mem_layer)
+        # Mostra conteggio feature per categoria in legenda
+        tree_layer = QgsProject.instance().layerTreeRoot().findLayer(mem_layer.id())
+        if tree_layer:
+            tree_layer.setCustomProperty("showFeatureCount", True)
+
     feat_count = mem_layer.featureCount()
 
-    print(f"[OK] Layer temporaneo caricato con {feat_count} feature(s)")
-    print(f"     CRS: {crs.authid()}")
-    print(f"     Geometria: {geom_type_str}")
-    print("     Campi aggiunti: 'geom_duplicata' (si/no), 'gruppo_duplicato' (n. gruppo)")
-    if espandi_catastale:
-        print("     Campi catastali: 'sezione', 'foglio', 'allegato', 'sviluppo'")
+    if is_append:
+        print(f"[OK] Aggiunte {len(new_features)} feature (totale: {feat_count})")
+        # Aggiorna conteggio in legenda
+        mem_layer.triggerRepaint()
+    else:
+        geom_type_str = _wkb_display_string(layer_info["wkb_type"])
+        print(f"[OK] Layer temporaneo caricato con {feat_count} feature(s)")
+        print(f"     CRS: {crs.authid()}")
+        print(f"     Geometria: {geom_type_str}")
+        print("     Campi aggiunti: 'geom_duplicata' (si/no), 'gruppo_duplicato' (n. gruppo)")
+        if espandi_catastale:
+            print("     Campi catastali: 'sezione', 'foglio', 'allegato', 'sviluppo'")
 
     # Zoom sul layer (trasforma extent nel CRS del progetto)
     canvas = qgis_iface.mapCanvas()
@@ -903,6 +947,8 @@ def esegui_download_e_caricamento(min_lat, min_lon, max_lat, max_lon, filter_geo
     if filtrate_punti > 0:
         print(f"  Filtro punti (PiP):       {filtrate_punti} escluse (non contengono punti)")
     print("=" * 60)
+
+    return mem_layer
 
 
 # =============================================================================
@@ -1490,6 +1536,27 @@ class PointSelectTool(QgsMapTool):
         self.espandi_catastale = espandi_catastale
         self.carica_wms = carica_wms
         self.on_completed = on_completed
+        self._session_layer = None
+        self._esc_shortcut = None
+
+    def activate(self):
+        super().activate()
+        self._esc_shortcut = QShortcut(
+            QKeySequence(_Key_Escape), self.canvas
+        )
+        try:
+            ctx = Qt.ShortcutContext.WidgetWithChildrenShortcut
+        except AttributeError:
+            ctx = Qt.WidgetWithChildrenShortcut
+        self._esc_shortcut.setContext(ctx)
+        self._esc_shortcut.activated.connect(self._on_esc)
+
+    def _on_esc(self):
+        """Gestisce ESC: termina la sessione click singolo."""
+        print("[PUNTI] Operazione annullata dall'utente (ESC).")
+        qgis_iface.actionPan().trigger()
+        if self.on_completed:
+            self.on_completed()
 
     def _visualizza_buffer(self, buffer_geom, buffer_crs):
         """Visualizza il buffer dissolto sulla mappa (viola)."""
@@ -1586,13 +1653,6 @@ class PointSelectTool(QgsMapTool):
             print("[PUNTI] Nessun layer punti trovato. "
                   "Download particella nel punto cliccato.")
             self._processa_click_singolo(click_map_point, project_crs)
-
-    def keyPressEvent(self, event):
-        if event.key() == _Key_Escape:
-            print("[PUNTI] Operazione annullata dall'utente (ESC).")
-            qgis_iface.actionPan().trigger()
-            if self.on_completed:
-                self.on_completed()
 
     def _processa_layer_punti(self, layer):
         """Processa i punti del layer (selezionati o tutti): buffer, dissolve, download, filtro."""
@@ -1806,20 +1866,23 @@ class PointSelectTool(QgsMapTool):
         else:
             pt_wfs = pt_geom
 
-        esegui_download_e_caricamento(
+        result_layer = esegui_download_e_caricamento(
             min_lat, min_lon, max_lat, max_lon,
             filter_geom=buffer_wfs,
             layer_name="Particelle WFS (click punto)",
             espandi_catastale=self.espandi_catastale,
             post_filter_points=[pt_wfs],
             carica_wms=self.carica_wms,
+            append_to_layer=self._session_layer,
         )
-
-        qgis_iface.actionPan().trigger()
-        if self.on_completed:
-            self.on_completed()
+        if result_layer is not None:
+            self._session_layer = result_layer
 
     def deactivate(self):
+        if self._esc_shortcut:
+            self._esc_shortcut.setEnabled(False)
+            self._esc_shortcut.deleteLater()
+            self._esc_shortcut = None
         if self.buffer_rb:
             try:
                 self.canvas.scene().removeItem(self.buffer_rb)
