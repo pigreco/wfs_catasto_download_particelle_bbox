@@ -10,9 +10,11 @@ import configparser
 import os
 import webbrowser
 
+from qgis.core import QgsProject, QgsVectorLayer
 from qgis.PyQt.QtCore import Qt
 from qgis.PyQt.QtGui import QFont, QPixmap
 from qgis.PyQt.QtWidgets import (
+    QComboBox,
     QDialog,
     QVBoxLayout,
     QHBoxLayout,
@@ -45,6 +47,24 @@ try:
 except AttributeError:
     _KeepAspectRatio = Qt.KeepAspectRatio
     _SmoothTransformation = Qt.SmoothTransformation
+
+
+def _is_point_layer(layer):
+    """Verifica se il layer è puntuale (compatibile Qt5/Qt6)."""
+    try:
+        from qgis.core import Qgis
+        return layer.geometryType() == Qgis.GeometryType.Point
+    except AttributeError:
+        return layer.geometryType() == 0
+
+
+def _is_polygon_layer(layer):
+    """Verifica se il layer è poligonale (compatibile Qt5/Qt6)."""
+    try:
+        from qgis.core import Qgis
+        return layer.geometryType() == Qgis.GeometryType.Polygon
+    except AttributeError:
+        return layer.geometryType() == 2
 
 
 def _plugin_version():
@@ -189,6 +209,39 @@ class SceltaModalitaDialog(QDialog):
         self._default_buffer_punti_m = default_buffer_punti_m
         self._default_snap_px = default_snap_px
         self._init_ui()
+
+    def showEvent(self, event):
+        """Aggiorna le combo dei layer ogni volta che il dialog viene mostrato."""
+        super().showEvent(event)
+        self._refresh_layer_combos()
+
+    def _refresh_layer_combos(self):
+        """Ripopola le combo con i layer correnti del progetto."""
+        # --- Sorgente punti: si azzera sempre a "(clicca sulla mappa)" ---
+        self.combo_source_layer.blockSignals(True)
+        self.combo_source_layer.clear()
+        self.combo_source_layer.addItem("(clicca sulla mappa)", None)
+        for layer in QgsProject.instance().mapLayers().values():
+            if isinstance(layer, QgsVectorLayer) and _is_point_layer(layer):
+                self.combo_source_layer.addItem(layer.name(), layer.id())
+        # Non ripristinare la selezione: ogni operazione parte da "(clicca sulla mappa)"
+        self.combo_source_layer.blockSignals(False)
+
+        # --- Layer destinazione append ---
+        self.combo_append_layer.blockSignals(True)
+        current_append_id = self.combo_append_layer.currentData()
+        self.combo_append_layer.clear()
+        self.combo_append_layer.addItem("(nuovo layer)", None)
+        for layer in QgsProject.instance().mapLayers().values():
+            if isinstance(layer, QgsVectorLayer) and _is_polygon_layer(layer):
+                if "Particelle" in layer.name() or "WFS" in layer.name():
+                    self.combo_append_layer.addItem(layer.name(), layer.id())
+        # Ripristina selezione precedente se ancora presente
+        if current_append_id is not None:
+            idx = self.combo_append_layer.findData(current_append_id)
+            if idx >= 0:
+                self.combo_append_layer.setCurrentIndex(idx)
+        self.combo_append_layer.blockSignals(False)
 
     def _init_ui(self):
         ver = _plugin_version()
@@ -450,6 +503,36 @@ class SceltaModalitaDialog(QDialog):
         params_row.addStretch()
         gl.addLayout(params_row)
 
+        # Layer sorgente punti
+        src_row = QHBoxLayout()
+        src_lbl = QLabel("Sorgente:")
+        src_lbl.setStyleSheet("font-weight: normal; font-size: 10px;")
+        src_row.addWidget(src_lbl)
+        self.combo_source_layer = QComboBox()
+        self.combo_source_layer.addItem("(clicca sulla mappa)", None)
+        self.combo_source_layer.setStyleSheet("font-size: 10px;")
+        self.combo_source_layer.setToolTip(
+            "Scegli un layer punti dal progetto oppure lascia\n"
+            "'(clicca sulla mappa)' per selezionarlo cliccando."
+        )
+        src_row.addWidget(self.combo_source_layer, 1)
+        gl.addLayout(src_row)
+
+        # Layer destinazione (append)
+        app_row = QHBoxLayout()
+        app_lbl = QLabel("Aggiungi a:")
+        app_lbl.setStyleSheet("font-weight: normal; font-size: 10px;")
+        app_row.addWidget(app_lbl)
+        self.combo_append_layer = QComboBox()
+        self.combo_append_layer.addItem("(nuovo layer)", None)
+        self.combo_append_layer.setStyleSheet("font-size: 10px;")
+        self.combo_append_layer.setToolTip(
+            "Scegli un layer Particelle WFS esistente a cui aggiungere\n"
+            "le nuove particelle, oppure lascia '(nuovo layer)'."
+        )
+        app_row.addWidget(self.combo_append_layer, 1)
+        gl.addLayout(app_row)
+
         gl.addStretch()
 
         btn = QPushButton("Seleziona Punti")
@@ -515,6 +598,22 @@ class SceltaModalitaDialog(QDialog):
     def _on_punti(self):
         self.scelta = "punti"
         self.accept()
+
+    @property
+    def selected_point_layer(self):
+        """Restituisce il layer punti sorgente selezionato, o None se 'clicca sulla mappa'."""
+        layer_id = self.combo_source_layer.currentData()
+        if layer_id is None:
+            return None
+        return QgsProject.instance().mapLayer(layer_id)
+
+    @property
+    def append_to_wfs_layer(self):
+        """Restituisce il layer WFS destinazione selezionato, o None se 'nuovo layer'."""
+        layer_id = self.combo_append_layer.currentData()
+        if layer_id is None:
+            return None
+        return QgsProject.instance().mapLayer(layer_id)
     
     def _on_aiuto(self):
         """Apre la pagina di aiuto del plugin su GitHub Pages."""

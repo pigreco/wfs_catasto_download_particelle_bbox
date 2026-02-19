@@ -116,6 +116,9 @@ L'autore declina ogni responsabilità per eventuali usi impropri del plugin o pe
 
 ## Changelog
 
+- **1.4.11** - Fix logica "Seleziona Punti": separazione netta tra Sorgente=(clicca sulla mappa) [solo singola particella per click, sessione ESC] e Sorgente=layer [processing automatico senza click interattivi]; refactoring try/finally garantisce chiusura tool anche su errore; messaggio "Nessuna feature" migliorato con suggerimento per punti in mare
+- **1.4.10** - Fix: combo "Sorgente" si azzera a "(clicca sulla mappa)" alla riapertura del dialogo; notifica nella barra messaggi QGIS con il conteggio feature caricate/aggiunte (sia per nuovo layer che per append)
+- **1.4.9** - Modalità Seleziona Punti: nuova combo "Sorgente" per scegliere un layer di punti dal dialogo senza cliccare in mappa; nuova combo "Aggiungi a" per appendere le particelle a un layer Particelle WFS esistente (risolve issue [#6](https://github.com/pigreco/wfs_catasto_download_particelle_bbox/issues/6))
 - **1.4.8** - Modalità Seleziona Punti: click singolo con accumulo feature nello stesso layer di sessione (append), deduplicazione cross-click, ESC affidabile con QShortcut
 - **1.4.7** - Miglioramenti interfaccia: riorganizzato layout bottoni ("Chiudi" 3/4 spazio, "Guida" 1/4), aggiunta voce "Guida" nel menu Plugin
 - **1.4.6** - Sistema help integrato con GitHub Pages (bottone "Aiuto" → documentazione online completa)

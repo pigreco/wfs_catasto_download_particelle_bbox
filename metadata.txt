@@ -6,7 +6,7 @@
 name=WFS Catasto Download Particelle BBox
 qgisMinimumVersion=3.0
 description=Download particelle catastali dal WFS dell'Agenzia delle Entrate tramite BBox, selezione poligono, linea con buffer o layer di punti.
-version=1.4.8
+version=1.4.11
 author=Salvatore Fiandaca
 email=pigrecoinfinito@gmail.com
 
@@ -30,6 +30,26 @@ repository=https://github.com/pigreco/wfs_catasto_download_particelle_bbox
 
 hasProcessingProvider=no
 changelog=
+    1.4.11 - Fix logica 'Seleziona Punti': separazione netta tra le due modalita'.
+             Sorgente=(clicca sulla mappa): SOLO download singola particella per
+             ogni click (modalita' sessione, ESC per terminare). Rimossa la
+             rilevazione automatica di layer punti vicini al click, ora gestita
+             esclusivamente dalla combo Sorgente.
+             Sorgente=layer specifico: processing automatico all'avvio, nessun
+             click interattivo. Refactoring _processa_layer_punti con try/finally
+             per garantire chiusura tool e riapertura dialogo anche in caso di errore.
+             Migliorato messaggio di errore "Nessuna feature" con suggerimento per
+             punti in mare o fuori copertura catastale.
+    1.4.10 - Fix: combo "Sorgente" si azzera sempre a "(clicca sulla mappa)" alla
+             riapertura del dialogo (non ripristina piu' la selezione precedente).
+             Fix: aggiunto showFeatureCount sul layer di destinazione in modalita'
+             append, e notifica nella barra messaggi QGIS con il conteggio
+             delle particelle aggiunte/caricate (sia per nuovo layer che per append).
+    1.4.9 - Modalita' Seleziona Punti: nuova combo "Sorgente" per scegliere un layer
+            di punti direttamente dal dialogo (senza dover cliccare in mappa).
+            Nuova combo "Aggiungi a" per aggiungere le particelle a un layer
+            Particelle WFS esistente invece di crearne uno nuovo.
+            Copertura completa degli scenari 2/3/4 richiesti nell'issue #6.
     1.4.8 - Modalita' Seleziona Punti: click singolo con accumulo feature nello
             stesso layer di sessione (append invece di creare un layer per ogni click).
             Deduplicazione cross-click per gml_id. ESC per terminare la sessione

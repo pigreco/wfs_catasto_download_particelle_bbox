@@ -108,6 +108,33 @@ def _is_point_layer(layer):
         return layer.geometryType() == 0
 
 
+def _set_show_feature_count(tree_layer, value):
+    """Imposta showFeatureCount compatibile con QGIS 3 (Qt5) e QGIS 4 (Qt6)."""
+    try:
+        tree_layer.setShowFeatureCount(bool(value))  # QGIS 3.32+ / QGIS 4 (Qt6)
+    except AttributeError:
+        # Fallback QGIS < 3.32: usa int (1/0) per compatibilità QVariant Qt6
+        tree_layer.setCustomProperty("showFeatureCount", 1 if value else 0)
+
+
+def _refresh_feature_counts_deferred(layer_id):
+    """Aggiorna i conteggi per-regola nella legenda dopo il render del canvas.
+
+    In Qt6/QGIS 4 i conteggi sono calcolati asincronamente (dopo il render):
+    questa funzione viene chiamata via QTimer per garantire che il canvas
+    abbia già eseguito il render prima di richiedere il refresh della legenda.
+    """
+    tl = QgsProject.instance().layerTreeRoot().findLayer(layer_id)
+    if tl is None:
+        return
+    _set_show_feature_count(tl, False)
+    _set_show_feature_count(tl, True)
+    try:
+        qgis_iface.layerTreeView().layerTreeModel().refreshLayerLegend(tl)
+    except Exception as e:
+        print(f"[WFS Catasto] deferred refreshLayerLegend: {e}")
+
+
 def _applica_stile_particelle(layer):
     """Applica stile rule-based al layer particelle in base al campo LABEL.
 
@@ -613,8 +640,12 @@ def esegui_download_e_caricamento(min_lat, min_lon, max_lat, max_lon, filter_geo
             "Nessuna feature",
             "Il download non ha prodotto risultati.\n\n"
             "Possibili cause:\n"
+            "- L'area selezionata è in mare o fuori dalla copertura catastale italiana\n"
             "- Non ci sono particelle catastali in quest'area\n"
-            "- Il server WFS non è raggiungibile",
+            "- Il server WFS non è raggiungibile\n\n"
+            "Suggerimento: in modalità 'Seleziona Punti', se un punto cade in mare\n"
+            "o in un'area priva di dati catastali, seleziona solo i punti validi\n"
+            "(su terraferma) prima di avviare il download.",
         )
         return
 
@@ -886,17 +917,45 @@ def esegui_download_e_caricamento(min_lat, min_lon, max_lat, max_lon, filter_geo
 
         # Aggiungi al progetto
         QgsProject.instance().addMapLayer(mem_layer)
-        # Mostra conteggio feature per categoria in legenda
+        # Mostra conteggio feature per categoria in legenda (immediato + deferred per Qt6)
+        mem_layer.triggerRepaint()
         tree_layer = QgsProject.instance().layerTreeRoot().findLayer(mem_layer.id())
         if tree_layer:
-            tree_layer.setCustomProperty("showFeatureCount", True)
+            _set_show_feature_count(tree_layer, True)
+            try:
+                qgis_iface.layerTreeView().layerTreeModel().refreshLayerLegend(tree_layer)
+            except Exception as e:
+                print(f"[WFS Catasto] refreshLayerLegend (nuovo layer): {e}")
+        # In Qt6 i conteggi per-regola sono calcolati dopo il render: refresh differito
+        QTimer.singleShot(500, lambda: _refresh_feature_counts_deferred(mem_layer.id()))
 
     feat_count = mem_layer.featureCount()
 
     if is_append:
-        print(f"[OK] Aggiunte {len(new_features)} feature (totale: {feat_count})")
-        # Aggiorna conteggio in legenda
+        n_aggiunte = len(new_features)
+        print(f"[OK] Aggiunte {n_aggiunte} feature (totale: {feat_count})")
+        # Re-applica lo stile: resetta i conteggi interni del renderer rule-based
+        # (necessario perché setCustomProperty("showFeatureCount", True) non rilancia
+        # le query di conteggio per-regola se il valore era già True)
+        _applica_stile_particelle(mem_layer)
         mem_layer.triggerRepaint()
+        tree_layer = QgsProject.instance().layerTreeRoot().findLayer(mem_layer.id())
+        if tree_layer:
+            # Toggle off → on forza QGIS a rieseguire le query di conteggio per-regola
+            _set_show_feature_count(tree_layer, False)
+            _set_show_feature_count(tree_layer, True)
+            try:
+                qgis_iface.layerTreeView().layerTreeModel().refreshLayerLegend(tree_layer)
+            except Exception as e:
+                print(f"[WFS Catasto] refreshLayerLegend (append): {e}")
+        # In Qt6 i conteggi per-regola sono calcolati dopo il render: refresh differito
+        QTimer.singleShot(500, lambda: _refresh_feature_counts_deferred(mem_layer.id()))
+        qgis_iface.messageBar().pushMessage(
+            "WFS Catasto",
+            f"Aggiunte {n_aggiunte} particelle a '{mem_layer.name()}' (totale nel layer: {feat_count})",
+            level=Qgis.MessageLevel.Success if hasattr(Qgis, 'MessageLevel') else Qgis.Success,
+            duration=6,
+        )
     else:
         geom_type_str = _wkb_display_string(layer_info["wkb_type"])
         print(f"[OK] Layer temporaneo caricato con {feat_count} feature(s)")
@@ -905,6 +964,12 @@ def esegui_download_e_caricamento(min_lat, min_lon, max_lat, max_lon, filter_geo
         print("     Campi aggiunti: 'geom_duplicata' (si/no), 'gruppo_duplicato' (n. gruppo)")
         if espandi_catastale:
             print("     Campi catastali: 'sezione', 'foglio', 'allegato', 'sviluppo'")
+        qgis_iface.messageBar().pushMessage(
+            "WFS Catasto",
+            f"Caricate {feat_count} particelle nel layer '{mem_layer.name()}'",
+            level=Qgis.MessageLevel.Success if hasattr(Qgis, 'MessageLevel') else Qgis.Success,
+            duration=6,
+        )
 
     # Zoom sul layer (trasforma extent nel CRS del progetto)
     canvas = qgis_iface.mapCanvas()
@@ -1527,7 +1592,8 @@ class PointSelectTool(QgsMapTool):
     """
 
     def __init__(self, canvas, buffer_distance=1, snap_tolerance=15,
-                 on_completed=None, espandi_catastale=False, carica_wms=False):
+                 on_completed=None, espandi_catastale=False, carica_wms=False,
+                 source_layer=None, initial_append_layer=None):
         super().__init__(canvas)
         self.canvas = canvas
         self.buffer_distance = buffer_distance
@@ -1536,7 +1602,8 @@ class PointSelectTool(QgsMapTool):
         self.espandi_catastale = espandi_catastale
         self.carica_wms = carica_wms
         self.on_completed = on_completed
-        self._session_layer = None
+        self.source_layer = source_layer
+        self._session_layer = initial_append_layer
         self._esc_shortcut = None
 
     def activate(self):
@@ -1550,6 +1617,9 @@ class PointSelectTool(QgsMapTool):
             ctx = Qt.WidgetWithChildrenShortcut
         self._esc_shortcut.setContext(ctx)
         self._esc_shortcut.activated.connect(self._on_esc)
+        # Se è stato preimpostato un layer sorgente, elaboralo subito
+        if self.source_layer is not None:
+            QTimer.singleShot(100, lambda: self._processa_layer_punti(self.source_layer))
 
     def _on_esc(self):
         """Gestisce ESC: termina la sessione click singolo."""
@@ -1582,236 +1652,193 @@ class PointSelectTool(QgsMapTool):
         self.buffer_rb.show()
 
     def canvasPressEvent(self, event):
+        """Click sulla mappa: scarica la particella sotto il cursore (modalità sessione).
+
+        Quando 'Sorgente' = '(clicca sulla mappa)' ogni click scarica la particella
+        catastale nel punto cliccato e la accumula nello stesso layer di sessione.
+        Premi ESC per terminare la sessione e riaprire il dialogo.
+
+        Quando 'Sorgente' = layer specifico il processing parte automaticamente
+        all'avvio (in activate()) e il click sulla mappa viene ignorato.
+        """
+        if self.source_layer is not None:
+            # Modalità layer sorgente: il processing è già partito automaticamente.
+            return
+
         click_map_point = self.toMapCoordinates(event.pos())
         project_crs = QgsProject.instance().crs()
-
-        print(f"\n[DEBUG] Click alle coordinate progetto ({project_crs.authid()}): "
+        print(f"\n[PUNTI] Click mappa ({project_crs.authid()}): "
               f"({click_map_point.x():.6f}, {click_map_point.y():.6f})")
+        self._processa_click_singolo(click_map_point, project_crs)
 
-        # Cerca layer puntuali
-        point_layers = []
-        for lyr in QgsProject.instance().mapLayers().values():
-            if isinstance(lyr, QgsVectorLayer) and _is_point_layer(lyr):
-                point_layers.append(lyr.name())
-        print(f"[DEBUG] Layer puntuali trovati: "
-              f"{point_layers if point_layers else 'NESSUNO'}")
+    def _processa_layer_punti(self, layer):
+        """Processa i punti del layer (selezionati o tutti): buffer, dissolve, download, filtro.
 
-        found = False
-        for layer in QgsProject.instance().mapLayers().values():
-            if not isinstance(layer, QgsVectorLayer):
-                continue
-            if not _is_point_layer(layer):
-                continue
-
+        Chiamato solo in modalità 'Sorgente = layer specifico' (auto-processing da activate()).
+        Al termine (anche in caso di errore) deattiva il tool e riapre il dialogo.
+        """
+        try:
             layer_crs = layer.crs()
+            layer_name = layer.name()
+            n_selected = layer.selectedFeatureCount()
+            n_features = layer.featureCount()
 
-            # Trasforma click nel CRS del layer
-            if project_crs.authid() != layer_crs.authid():
-                to_layer = QgsCoordinateTransform(
-                    project_crs, layer_crs, QgsProject.instance()
+            print(f"\n[PUNTI] Layer sorgente: {layer_name}")
+            print(f"        CRS: {layer_crs.authid()}")
+            print(f"        Punti nel layer: {n_features}")
+            print(f"        Punti selezionati: {n_selected}")
+
+            if n_features == 0:
+                QMessageBox.warning(
+                    qgis_iface.mainWindow(),
+                    "Layer vuoto",
+                    f"Il layer '{layer_name}' non contiene feature.",
                 )
-                click_layer_point = to_layer.transform(click_map_point)
+                return
+
+            # Usa i punti selezionati se disponibili, altrimenti tutti
+            if n_selected > 0:
+                features = layer.selectedFeatures()
+                print(f"[PUNTI] Uso {n_selected} punti selezionati")
             else:
-                click_layer_point = click_map_point
+                features = layer.getFeatures()
+                print(f"[PUNTI] Nessuna selezione, uso tutti i {n_features} punti")
 
-            # Tolleranza di ricerca (parametrica)
-            tolerance = self.canvas.mapUnitsPerPixel() * self.snap_tolerance
-            if project_crs.authid() != layer_crs.authid():
-                tolerance_layer = tolerance * 2
-            else:
-                tolerance_layer = tolerance
-
-            search_rect = QgsRectangle(
-                click_layer_point.x() - tolerance_layer,
-                click_layer_point.y() - tolerance_layer,
-                click_layer_point.x() + tolerance_layer,
-                click_layer_point.y() + tolerance_layer,
-            )
-
-            request = QgsFeatureRequest().setFilterRect(search_rect)
-            click_geom = QgsGeometry.fromPointXY(click_layer_point)
-
-            # Trova punto più vicino
-            min_distance = float('inf')
-            closest_feature = None
-
-            for feat in layer.getFeatures(request):
+            all_points = []
+            for feat in features:
                 geom = feat.geometry()
                 if geom.isNull() or geom.isEmpty():
                     continue
-                distance = geom.distance(click_geom)
-                if distance < min_distance:
-                    min_distance = distance
-                    closest_feature = feat
+                all_points.append(geom)
 
-            if closest_feature is not None and min_distance <= tolerance_layer:
-                found = True
-                self._processa_layer_punti(layer)
+            if not all_points:
+                QMessageBox.warning(
+                    qgis_iface.mainWindow(),
+                    "Nessun punto valido",
+                    f"Il layer '{layer_name}' non contiene geometrie valide.",
+                )
                 return
 
-        if not found:
-            print("[PUNTI] Nessun layer punti trovato. "
-                  "Download particella nel punto cliccato.")
-            self._processa_click_singolo(click_map_point, project_crs)
+            print(f"[PUNTI] Punti validi: {len(all_points)}")
 
-    def _processa_layer_punti(self, layer):
-        """Processa i punti del layer (selezionati o tutti): buffer, dissolve, download, filtro."""
-        layer_crs = layer.crs()
-        layer_name = layer.name()
-        n_selected = layer.selectedFeatureCount()
-        n_features = layer.featureCount()
+            # Determina CRS di lavoro per il buffer
+            if layer_crs.isGeographic():
+                print(f"[PUNTI] CRS geografico rilevato ({layer_crs.authid()}).")
+                print("        Auto-riproiezione in zona UTM...")
 
-        print(f"\n[PUNTI] Layer selezionato: {layer_name}")
-        print(f"        CRS: {layer_crs.authid()}")
-        print(f"        Punti nel layer: {n_features}")
-        print(f"        Punti selezionati: {n_selected}")
+                # Calcola centroide medio per determinare zona UTM
+                sum_x, sum_y = 0.0, 0.0
+                for pt_geom in all_points:
+                    centroid = pt_geom.centroid().asPoint()
+                    sum_x += centroid.x()
+                    sum_y += centroid.y()
+                avg_lon = sum_x / len(all_points)
+                avg_lat = sum_y / len(all_points)
 
-        if n_features == 0:
-            QMessageBox.warning(
-                qgis_iface.mainWindow(),
-                "Layer vuoto",
-                f"Il layer '{layer_name}' non contiene feature.",
+                utm_epsg = _determina_utm_epsg(avg_lon, avg_lat)
+                buffer_crs = QgsCoordinateReferenceSystem(utm_epsg)
+                print(f"        Centroide punti: ({avg_lon:.6f}, {avg_lat:.6f})")
+                print(f"        Zona UTM scelta: {utm_epsg}")
+
+                # Riproietta punti in UTM per il buffer
+                transform_to_utm = QgsCoordinateTransform(
+                    layer_crs, buffer_crs, QgsProject.instance()
+                )
+                points_for_buffer = []
+                for pt_geom in all_points:
+                    pt_utm = QgsGeometry(pt_geom)
+                    pt_utm.transform(transform_to_utm)
+                    points_for_buffer.append(pt_utm)
+            else:
+                buffer_crs = layer_crs
+                points_for_buffer = all_points
+                print(f"[PUNTI] CRS proiettato ({layer_crs.authid()}), "
+                      "nessuna riproiezione necessaria.")
+
+            # Buffer individuale + Dissolve
+            print(f"[PUNTI] Creazione buffer di {self.buffer_distance}m "
+                  f"per {len(points_for_buffer)} punti...")
+
+            buffer_geoms = []
+            for pt_geom in points_for_buffer:
+                buf = pt_geom.buffer(self.buffer_distance, 8)
+                if not buf.isNull() and not buf.isEmpty():
+                    buffer_geoms.append(buf)
+
+            if not buffer_geoms:
+                QMessageBox.warning(
+                    qgis_iface.mainWindow(),
+                    "Errore buffer",
+                    "Impossibile creare i buffer per i punti.",
+                )
+                return
+
+            dissolved = QgsGeometry.unaryUnion(buffer_geoms)
+            if dissolved.isNull() or dissolved.isEmpty():
+                QMessageBox.warning(
+                    qgis_iface.mainWindow(),
+                    "Errore dissolve",
+                    "Impossibile dissolvere i buffer.",
+                )
+                return
+
+            print("[PUNTI] Buffer dissolto creato.")
+            print(f"        Area dissolve: ~{dissolved.area():.1f} m²")
+
+            # Visualizza il buffer dissolto
+            self._visualizza_buffer(dissolved, buffer_crs)
+
+            # Trasforma bbox e dissolve in EPSG:6706
+            bbox = dissolved.boundingBox()
+            print(f"[PUNTI] BBox del dissolve ({buffer_crs.authid()}):")
+            print(f"        xMin={bbox.xMinimum():.7f}, yMin={bbox.yMinimum():.7f}")
+            print(f"        xMax={bbox.xMaximum():.7f}, yMax={bbox.yMaximum():.7f}")
+
+            min_lat, min_lon, max_lat, max_lon = trasforma_bbox_a_wfs(
+                bbox, buffer_crs
             )
-            return
 
-        # Usa i punti selezionati se disponibili, altrimenti tutti
-        if n_selected > 0:
-            features = layer.selectedFeatures()
-            print(f"[PUNTI] Uso {n_selected} punti selezionati")
-        else:
-            features = layer.getFeatures()
-            print(f"[PUNTI] Nessuna selezione, uso tutti i {n_features} punti")
+            wfs_crs = QgsCoordinateReferenceSystem(WFS_CRS_ID)
+            if buffer_crs.authid() != wfs_crs.authid():
+                transform_to_wfs = QgsCoordinateTransform(
+                    buffer_crs, wfs_crs, QgsProject.instance()
+                )
+                dissolved_wfs = QgsGeometry(dissolved)
+                dissolved_wfs.transform(transform_to_wfs)
+            else:
+                dissolved_wfs = dissolved
 
-        all_points = []
-        for feat in features:
-            geom = feat.geometry()
-            if geom.isNull() or geom.isEmpty():
-                continue
-            all_points.append(geom)
+            # Trasforma punti originali in WFS CRS per post-filtro
+            wfs_points = []
+            if layer_crs.authid() != wfs_crs.authid():
+                transform_pts_to_wfs = QgsCoordinateTransform(
+                    layer_crs, wfs_crs, QgsProject.instance()
+                )
+                for pt_geom in all_points:
+                    pt_wfs = QgsGeometry(pt_geom)
+                    pt_wfs.transform(transform_pts_to_wfs)
+                    wfs_points.append(pt_wfs)
+            else:
+                wfs_points = list(all_points)
 
-        if not all_points:
-            QMessageBox.warning(
-                qgis_iface.mainWindow(),
-                "Nessun punto valido",
-                f"Il layer '{layer_name}' non contiene geometrie valide.",
+            # Download WFS con filtro
+            result_layer = esegui_download_e_caricamento(
+                min_lat, min_lon, max_lat, max_lon,
+                filter_geom=dissolved_wfs,
+                layer_name=f"Particelle WFS (Punti buffer {self.buffer_distance} m)",
+                espandi_catastale=self.espandi_catastale,
+                post_filter_points=wfs_points,
+                carica_wms=self.carica_wms,
+                append_to_layer=self._session_layer,
             )
-            return
+            if result_layer is not None:
+                self._session_layer = result_layer
 
-        print(f"[PUNTI] Punti validi: {len(all_points)}")
-
-        # Determina CRS di lavoro per il buffer
-        if layer_crs.isGeographic():
-            print(f"[PUNTI] CRS geografico rilevato ({layer_crs.authid()}).")
-            print("        Auto-riproiezione in zona UTM...")
-
-            # Calcola centroide medio per determinare zona UTM
-            sum_x, sum_y = 0.0, 0.0
-            for pt_geom in all_points:
-                centroid = pt_geom.centroid().asPoint()
-                sum_x += centroid.x()
-                sum_y += centroid.y()
-            avg_lon = sum_x / len(all_points)
-            avg_lat = sum_y / len(all_points)
-
-            utm_epsg = _determina_utm_epsg(avg_lon, avg_lat)
-            buffer_crs = QgsCoordinateReferenceSystem(utm_epsg)
-            print(f"        Centroide punti: ({avg_lon:.6f}, {avg_lat:.6f})")
-            print(f"        Zona UTM scelta: {utm_epsg}")
-
-            # Riproietta punti in UTM per il buffer
-            transform_to_utm = QgsCoordinateTransform(
-                layer_crs, buffer_crs, QgsProject.instance()
-            )
-            points_for_buffer = []
-            for pt_geom in all_points:
-                pt_utm = QgsGeometry(pt_geom)
-                pt_utm.transform(transform_to_utm)
-                points_for_buffer.append(pt_utm)
-        else:
-            buffer_crs = layer_crs
-            points_for_buffer = all_points
-            print(f"[PUNTI] CRS proiettato ({layer_crs.authid()}), "
-                  "nessuna riproiezione necessaria.")
-
-        # Buffer individuale + Dissolve
-        print(f"[PUNTI] Creazione buffer di {self.buffer_distance}m "
-              f"per {len(points_for_buffer)} punti...")
-
-        buffer_geoms = []
-        for pt_geom in points_for_buffer:
-            buf = pt_geom.buffer(self.buffer_distance, 8)
-            if not buf.isNull() and not buf.isEmpty():
-                buffer_geoms.append(buf)
-
-        if not buffer_geoms:
-            QMessageBox.warning(
-                qgis_iface.mainWindow(),
-                "Errore buffer",
-                "Impossibile creare i buffer per i punti.",
-            )
-            return
-
-        dissolved = QgsGeometry.unaryUnion(buffer_geoms)
-        if dissolved.isNull() or dissolved.isEmpty():
-            QMessageBox.warning(
-                qgis_iface.mainWindow(),
-                "Errore dissolve",
-                "Impossibile dissolvere i buffer.",
-            )
-            return
-
-        print("[PUNTI] Buffer dissolto creato.")
-        print(f"        Area dissolve: ~{dissolved.area():.1f} m²")
-
-        # Visualizza il buffer dissolto
-        self._visualizza_buffer(dissolved, buffer_crs)
-
-        # Trasforma bbox e dissolve in EPSG:6706
-        bbox = dissolved.boundingBox()
-        print(f"[PUNTI] BBox del dissolve ({buffer_crs.authid()}):")
-        print(f"        xMin={bbox.xMinimum():.7f}, yMin={bbox.yMinimum():.7f}")
-        print(f"        xMax={bbox.xMaximum():.7f}, yMax={bbox.yMaximum():.7f}")
-
-        min_lat, min_lon, max_lat, max_lon = trasforma_bbox_a_wfs(
-            bbox, buffer_crs
-        )
-
-        wfs_crs = QgsCoordinateReferenceSystem(WFS_CRS_ID)
-        if buffer_crs.authid() != wfs_crs.authid():
-            transform_to_wfs = QgsCoordinateTransform(
-                buffer_crs, wfs_crs, QgsProject.instance()
-            )
-            dissolved_wfs = QgsGeometry(dissolved)
-            dissolved_wfs.transform(transform_to_wfs)
-        else:
-            dissolved_wfs = dissolved
-
-        # Trasforma punti originali in WFS CRS per post-filtro
-        wfs_points = []
-        if layer_crs.authid() != wfs_crs.authid():
-            transform_pts_to_wfs = QgsCoordinateTransform(
-                layer_crs, wfs_crs, QgsProject.instance()
-            )
-            for pt_geom in all_points:
-                pt_wfs = QgsGeometry(pt_geom)
-                pt_wfs.transform(transform_pts_to_wfs)
-                wfs_points.append(pt_wfs)
-        else:
-            wfs_points = list(all_points)
-
-        # Download WFS con filtro
-        esegui_download_e_caricamento(
-            min_lat, min_lon, max_lat, max_lon,
-            filter_geom=dissolved_wfs,
-            layer_name=f"Particelle WFS (Punti buffer {self.buffer_distance} m)",
-            espandi_catastale=self.espandi_catastale,
-            post_filter_points=wfs_points,
-            carica_wms=self.carica_wms,
-        )
-
-        qgis_iface.actionPan().trigger()
-        if self.on_completed:
-            self.on_completed()
+        finally:
+            # Sempre: deattiva il tool e riapri il dialogo
+            qgis_iface.actionPan().trigger()
+            if self.on_completed:
+                self.on_completed()
 
     def _processa_click_singolo(self, click_point, click_crs):
         """Fallback: usa il punto cliccato per scaricare la particella sottostante."""
@@ -2046,16 +2073,26 @@ class WfsCatastoDownloadParticelleBbox:
         elif dlg.scelta == "punti":
             buffer_m = dlg.buffer_punti_distance
             snap_px = dlg.snap_tolerance
+            source_lyr = dlg.selected_point_layer
+            append_lyr = dlg.append_to_wfs_layer
             print("\n  MODALITÀ: Seleziona Punti")
-            print("  >>> Clicca vicino a un punto in mappa")
+            if source_lyr is not None:
+                print(f"  >>> Layer sorgente: {source_lyr.name()}")
+            else:
+                print("  >>> Clicca vicino a un punto in mappa")
             print(f"  >>> Verrà creato un buffer di {buffer_m}m per ogni punto del layer")
             print(f"  >>> Tolleranza snap: {snap_px} px")
-            print("  >>> Se nessun punto vicino: download particella nel click")
+            if append_lyr is not None:
+                print(f"  >>> Aggiungi a layer esistente: {append_lyr.name()}")
+            else:
+                print("  >>> Verrà creato un nuovo layer")
             print("  >>> CRS geografico supportato (auto-riproiezione UTM)\n")
             tool = PointSelectTool(canvas, buffer_distance=buffer_m,
                                    snap_tolerance=snap_px,
                                    on_completed=self._reopen_dialog,
-                                   espandi_catastale=espandi, carica_wms=wms)
+                                   espandi_catastale=espandi, carica_wms=wms,
+                                   source_layer=source_lyr,
+                                   initial_append_layer=append_lyr)
             canvas.setMapTool(tool)
             self._active_tool = tool
 

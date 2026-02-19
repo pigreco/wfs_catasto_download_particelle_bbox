@@ -261,7 +261,7 @@
             </ol>
             
             <div class="info">
-                <strong>💡 Tip:</strong> Il plugin comparirà nel menu <strong>Plugin</strong> con due opzioni: "Avvia Download Particelle Catastali" e "Informazioni".
+                <strong>💡 Tip:</strong> Il plugin comparirà nel menu <strong>Plugin</strong> con tre opzioni: "Avvia Download Particelle Catastali", "Informazioni" e "Guida".
             </div>
         </section>
 
@@ -338,18 +338,58 @@
             <div class="mode-card">
                 <div class="mode-content">
                     <h4>4. 📍 Seleziona Punti</h4>
-                    <p>Usa punti esistenti o disegnati per scaricare le particelle che li contengono.</p>
-                    
+                    <p>Usa punti esistenti o disegnati per scaricare le particelle che li contengono. Supporta quattro scenari d'uso combinabili.</p>
+
                     <div class="steps">
-                        <h4>Procedura:</h4>
-                        <ol>
-                            <li>Carica un layer di punti o preparati a cliccare in mappa</li>
-                            <li>Il sistema supporta selezione parziale dei punti</li>
-                            <li>Auto-riproiezione UTM per CRS geografici</li>
-                            <li>Download automatico delle particelle contenenti i punti</li>
-                            <li>Se non ci sono layer di punti, ogni click scarica la particella e la accumula nello stesso layer</li>
-                            <li>Premi <strong>ESC</strong> per terminare la sessione</li>
-                        </ol>
+                        <h4>Parametri disponibili nel dialogo:</h4>
+                        <ul>
+                            <li><strong>Buffer:</strong> distanza in metri attorno a ciascun punto (default 1 m)</li>
+                            <li><strong>Snap:</strong> tolleranza in pixel per il click sulla mappa</li>
+                            <li><strong>Sorgente:</strong> layer di punti da usare come input (opzionale)</li>
+                            <li><strong>Aggiungi a:</strong> layer Particelle WFS esistente in cui accodare le nuove particelle (opzionale)</li>
+                        </ul>
+                    </div>
+
+                    <div class="steps">
+                        <h4>Due modalità di funzionamento:</h4>
+                        <ul>
+                            <li>
+                                <strong>Sorgente = "(clicca sulla mappa)"</strong> — modalità interattiva a click.<br>
+                                Ogni click sulla mappa scarica la particella catastale nel punto cliccato e la accumula nello stesso layer di sessione.
+                                Premi <strong>ESC</strong> per terminare la sessione e riaprire il dialogo.
+                                Se hai impostato <em>Aggiungi a</em>, le particelle vengono accodate al layer selezionato; altrimenti viene creato un nuovo layer al primo click e i click successivi vi vengono aggiunti.
+                            </li>
+                            <li>
+                                <strong>Sorgente = layer specifico</strong> — modalità automatica.<br>
+                                Scegli un layer di punti dalla combo <em>Sorgente</em>: il download parte automaticamente, senza dover cliccare sulla mappa.
+                                Vengono usati i punti selezionati (se presenti) oppure tutti i punti del layer.
+                                Al termine il dialogo si riapre automaticamente.
+                            </li>
+                        </ul>
+                    </div>
+
+                    <div class="steps">
+                        <h4>Come usare "Aggiungi a":</h4>
+                        <ul>
+                            <li><strong>Aggiungi a = "(nuovo layer)"</strong> — il risultato finisce in un nuovo layer temporaneo (comportamento predefinito)</li>
+                            <li><strong>Aggiungi a = layer esistente</strong> — le particelle vengono accodate al layer Particelle WFS selezionato. La selezione viene mantenuta tra un ciclo e l'altro. Compatibile con entrambe le modalità Sorgente.</li>
+                        </ul>
+                    </div>
+
+                    <div class="info">
+                        <strong>💡 Tip:</strong> Le combo <em>Sorgente</em> e <em>Aggiungi a</em> sono combinabili: puoi usare un layer sorgente <strong>e</strong> accodare il risultato a un layer esistente in una sola operazione. Dopo ogni download viene mostrata una notifica nella barra messaggi QGIS con il numero di particelle caricate.
+                    </div>
+
+                    <div class="info">
+                        <strong>🔄 Selezione parziale:</strong> Se nel layer di punti sorgente sono presenti punti selezionati, verranno usati solo quelli; altrimenti tutti i punti del layer.
+                    </div>
+
+                    <div class="warning">
+                        <strong>⚠️ CRS geografico:</strong> Se il layer di punti usa un CRS geografico (gradi), il plugin esegue automaticamente una riproiezione UTM per calcolare correttamente il buffer.
+                    </div>
+
+                    <div class="warning">
+                        <strong>⚠️ Punti in mare o fuori dalla copertura catastale:</strong> Se uno o più punti del layer cadono in mare, su un lago o in un'area priva di dati catastali (es. zone militari, aree estere), il download restituirà "Nessuna feature". Il servizio WFS dell'Agenzia delle Entrate copre solo il territorio italiano continentale e insulare con dati catastali disponibili. <strong>Soluzione:</strong> seleziona manualmente solo i punti su terraferma prima di avviare il download; il plugin utilizzerà automaticamente solo i punti selezionati.
                     </div>
                 </div>
                 <div class="mode-image">
