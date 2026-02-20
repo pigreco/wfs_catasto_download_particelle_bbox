@@ -316,6 +316,7 @@ class SceltaModalitaDialog(QDialog):
 
         # --- Riga Output ---
         layout.addWidget(self._row_output())
+        layout.addWidget(self._make_sep())
 
         # --- Riga Opzioni ---
         layout.addWidget(self._row_opzioni())
