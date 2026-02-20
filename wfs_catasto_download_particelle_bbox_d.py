@@ -509,6 +509,7 @@ class SceltaModalitaDialog(QDialog):
         lbl = QLabel("OUTPUT")
         lbl.setFixedWidth(55)
         lbl.setStyleSheet("font-size: 10px; color: #1565C0; font-weight: bold;")
+        row.addWidget(lbl)
         return w
 
     def _row_opzioni(self):
@@ -526,6 +527,7 @@ class SceltaModalitaDialog(QDialog):
         lbl = QLabel("OPZIONI")
         lbl.setFixedWidth(55)
         lbl.setStyleSheet("font-size: 10px; color: #6A1B9A; font-weight: bold;")
+        row.addWidget(lbl)
         return w
 
         # ---- Helpers ----
