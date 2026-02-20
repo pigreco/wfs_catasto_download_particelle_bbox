@@ -18,14 +18,12 @@ from qgis.PyQt.QtWidgets import (
     QDialog,
     QVBoxLayout,
     QHBoxLayout,
-    QGridLayout,
     QLabel,
     QPushButton,
-    QGroupBox,
     QSpinBox,
     QCheckBox,
-    QScrollArea,
     QWidget,
+    QFrame,
     QMessageBox,
 )
 
@@ -260,22 +258,19 @@ class SceltaModalitaDialog(QDialog):
 
     def _init_ui(self):
         ver = _plugin_version()
-        titolo = "WFS Catasto - Scelta modalità"
+        titolo_str = "WFS Catasto - Scelta modalità"
         if ver:
-            titolo += f"  v{ver}"
-        self.setWindowTitle(titolo)
-        self.setMinimumWidth(500)
-        self.setWindowFlags(
-            self.windowFlags()
-            & ~_WinHelpHint
-        )
+            titolo_str += f"  v{ver}"
+        self.setWindowTitle(titolo_str)
+        self.setMinimumWidth(580)
+        self.setWindowFlags(self.windowFlags() & ~_WinHelpHint)
 
         layout = QVBoxLayout()
-        layout.setSpacing(10)
-        layout.setContentsMargins(15, 15, 15, 15)
+        layout.setSpacing(3)
+        layout.setContentsMargins(12, 12, 12, 12)
 
-        # Titolo
-        titolo = QLabel(
+        # --- Titolo ---
+        titolo_lbl = QLabel(
             'Download Particelle Catastali WFS '
             '(<a href="https://creativecommons.org/licenses/by/4.0/deed.it">'
             'CC-BY 4.0</a>)'
@@ -283,282 +278,198 @@ class SceltaModalitaDialog(QDialog):
         font_titolo = QFont()
         font_titolo.setPointSize(13)
         font_titolo.setBold(True)
-        titolo.setFont(font_titolo)
-        titolo.setAlignment(_AlignCenter)
-        titolo.setTextFormat(_RichText)
-        titolo.setOpenExternalLinks(True)
-        layout.addWidget(titolo)
+        titolo_lbl.setFont(font_titolo)
+        titolo_lbl.setAlignment(_AlignCenter)
+        titolo_lbl.setTextFormat(_RichText)
+        titolo_lbl.setOpenExternalLinks(True)
+        layout.addWidget(titolo_lbl)
 
-        # Sottotitolo
-        sottotitolo = QLabel(
-            "Seleziona la modalità per definire l'area di interesse:"
-        )
+        sottotitolo = QLabel("Seleziona la modalità per definire l'area di interesse:")
         sottotitolo.setAlignment(_AlignCenter)
         layout.addWidget(sottotitolo)
 
-        # --- Griglia 2x2 ---
-        grid = QGridLayout()
-        grid.setSpacing(8)
+        layout.addSpacing(4)
 
-        # Dimensioni SVG per la griglia (uguali per tutte le celle)
-        svg_w, svg_h = 200, 160
+        # Dimensioni icona SVG per le righe
+        ico_w, ico_h = 56, 44
 
-        # (0,0) Disegna BBox
-        grid.addWidget(self._cell_bbox(svg_w, svg_h), 0, 0)
-        # (0,1) Seleziona Poligono
-        grid.addWidget(self._cell_poligono(svg_w, svg_h), 0, 1)
-        # (1,0) Seleziona Linea
-        grid.addWidget(self._cell_linea(svg_w, svg_h), 1, 0)
-        # (1,1) Seleziona Punti
-        grid.addWidget(self._cell_punti(svg_w, svg_h), 1, 1)
+        # --- Righe modalità ---
+        layout.addWidget(self._row_bbox(ico_w, ico_h))
+        layout.addWidget(self._row_poligono(ico_w, ico_h))
+        layout.addWidget(self._row_linea(ico_w, ico_h))
+        layout.addWidget(self._row_punti(ico_w, ico_h))
 
-        layout.addLayout(grid)
+        # --- Separatore ---
+        sep = QFrame()
+        sep.setFrameShape(QFrame.Shape.HLine if hasattr(QFrame, 'Shape') else QFrame.HLine)
+        sep.setStyleSheet("color: #ccc;")
+        layout.addWidget(sep)
 
-        # --- Output unificato ---
-        group_output = QGroupBox("Output")
-        group_output.setStyleSheet(self._CELL_STYLE)
-        gout_layout = QVBoxLayout()
+        # --- Riga Output ---
+        layout.addWidget(self._row_output(ico_w, ico_h))
 
-        self.check_output_globale = QCheckBox(
-            "Aggiungi a layer esistente (tutte le modalità)"
-        )
-        self.check_output_globale.setStyleSheet("font-weight: normal;")
-        self.check_output_globale.setChecked(False)
-        gout_layout.addWidget(self.check_output_globale)
+        # --- Riga Opzioni ---
+        layout.addWidget(self._row_opzioni(ico_w, ico_h))
 
-        combo_out_row = QHBoxLayout()
-        combo_out_lbl = QLabel("Layer destinazione:")
-        combo_out_lbl.setStyleSheet("font-weight: normal; font-size: 10px;")
-        combo_out_row.addWidget(combo_out_lbl)
-        self.combo_output_globale = QComboBox()
-        self.combo_output_globale.setStyleSheet("font-size: 10px;")
-        self.combo_output_globale.setEnabled(False)
-        self.combo_output_globale.setToolTip(
-            "Layer Particelle WFS esistente a cui accodare i risultati\n"
-            "di qualsiasi modalità di download."
-        )
-        combo_out_row.addWidget(self.combo_output_globale, 1)
-        gout_layout.addLayout(combo_out_row)
-
-        group_output.setLayout(gout_layout)
-
-        # Connessione checkbox → abilita/disabilita combo e mostra/nasconde app_row locale
+        # Connessione checkbox -> abilita/disabilita combo e mostra/nasconde app_row locale
         self.check_output_globale.toggled.connect(self._on_output_globale_toggled)
 
-        # --- Opzioni ---
-        group_opzioni = QGroupBox("Opzioni")
-        group_opzioni.setStyleSheet(self._CELL_STYLE)
-        go_layout = QVBoxLayout()
-        self.check_espandi_catastale = QCheckBox(
-            "Espandi riferimento catastale (sezione, foglio, allegato, sviluppo)"
-        )
-        self.check_espandi_catastale.setStyleSheet("font-weight: normal;")
-        self.check_espandi_catastale.setChecked(False)
-        go_layout.addWidget(self.check_espandi_catastale)
-        self.check_carica_wms = QCheckBox(
-            "Carica WMS Cartografia Catastale"
-        )
-        self.check_carica_wms.setStyleSheet("font-weight: normal;")
-        self.check_carica_wms.setChecked(False)
-        go_layout.addWidget(self.check_carica_wms)
-        group_opzioni.setLayout(go_layout)
+        # --- Separatore ---
+        sep2 = QFrame()
+        sep2.setFrameShape(QFrame.Shape.HLine if hasattr(QFrame, 'Shape') else QFrame.HLine)
+        sep2.setStyleSheet("color: #ccc;")
+        layout.addWidget(sep2)
 
-        # --- Output e Opzioni affiancati (stessa riga) ---
-        row_out_opt = QHBoxLayout()
-        row_out_opt.addWidget(group_output, 1)
-        row_out_opt.addWidget(group_opzioni, 1)
-        layout.addLayout(row_out_opt)
-
-        # --- Layout per i pulsanti in basso ---
+        # --- Pulsanti in basso ---
         bottom_layout = QHBoxLayout()
-        
-        # --- Pulsante Chiudi (3/4 dello spazio) ---
         btn_annulla = QPushButton("Chiudi")
         btn_annulla.setMinimumHeight(32)
         btn_annulla.setStyleSheet(
             "QPushButton { background-color: #D32F2F; color: white; "
-            "font-size: 11px; font-weight: bold; border: none; "
-            "border-radius: 4px; }"
+            "font-size: 11px; font-weight: bold; border: none; border-radius: 4px; }"
             "QPushButton:hover { background-color: #B71C1C; }"
         )
         btn_annulla.clicked.connect(self.reject)
-        bottom_layout.addWidget(btn_annulla, 3)  # 3/4 dello spazio
-        
-        # --- Pulsante Aiuto (1/4 dello spazio) ---
+        bottom_layout.addWidget(btn_annulla, 3)
         btn_aiuto = QPushButton("❓ Guida")
         btn_aiuto.setMinimumHeight(32)
         btn_aiuto.setStyleSheet(
             "QPushButton { background-color: #4CAF50; color: white; "
-            "font-size: 11px; font-weight: bold; border: none; "
-            "border-radius: 4px; }"
+            "font-size: 11px; font-weight: bold; border: none; border-radius: 4px; }"
             "QPushButton:hover { background-color: #45a049; }"
         )
         btn_aiuto.clicked.connect(self._on_aiuto)
-        bottom_layout.addWidget(btn_aiuto, 1)  # 1/4 dello spazio
-        
+        bottom_layout.addWidget(btn_aiuto, 1)
         layout.addLayout(bottom_layout)
 
         self.setLayout(layout)
 
-    # ---- Celle della griglia ----
+    # ---- Righe lista ----
 
-    def _cell_bbox(self, svg_w, svg_h):
-        """Cella (0,0): Disegna BBox."""
-        group = QGroupBox("Disegna BBox")
-        group.setStyleSheet(self._CELL_STYLE)
-        gl = QVBoxLayout()
+    _BTN_STYLE = (
+        "QPushButton {{ background-color: {color}; color: white; "
+        "font-size: 11px; font-weight: bold; border: none; border-radius: 4px; }}"
+        "QPushButton:hover {{ background-color: {hover}; }}"
+    )
+    _LBL_STYLE = "font-weight: normal; font-size: 10px;"
+    _DESC_STYLE = "font-size: 10px; color: #666;"
 
-        gl.addWidget(self._svg_label("sketches_bbox.svg", svg_w, svg_h))
+    def _make_row(self):
+        """Crea un QWidget riga con QHBoxLayout interno."""
+        w = QWidget()
+        row = QHBoxLayout(w)
+        row.setContentsMargins(2, 2, 2, 2)
+        row.setSpacing(8)
+        return w, row
 
-        desc = QLabel("Disegna un rettangolo sulla mappa")
-        desc.setWordWrap(True)
-        desc.setStyleSheet("font-weight: normal; font-size: 10px;")
-        desc.setAlignment(_AlignCenter)
-        gl.addWidget(desc)
-
-        gl.addStretch()
-
+    def _row_bbox(self, ico_w, ico_h):
+        w, row = self._make_row()
+        row.addWidget(self._svg_label("sketches_bbox.svg", ico_w, ico_h))
         btn = QPushButton("Disegna BBox")
-        btn.setMinimumHeight(34)
-        btn.setStyleSheet(
-            "QPushButton { background-color: #2962FF; color: white; "
-            "font-size: 11px; font-weight: bold; border: none; "
-            "border-radius: 4px; }"
-            "QPushButton:hover { background-color: #1E4FD0; }"
-        )
+        btn.setMinimumHeight(32)
+        btn.setMinimumWidth(160)
+        btn.setStyleSheet(self._BTN_STYLE.format(color="#2962FF", hover="#1E4FD0"))
         btn.clicked.connect(self._on_disegna)
-        gl.addWidget(btn)
-
-        group.setLayout(gl)
-        return group
-
-    def _cell_poligono(self, svg_w, svg_h):
-        """Cella (0,1): Seleziona Poligono."""
-        group = QGroupBox("Seleziona Poligono")
-        group.setStyleSheet(self._CELL_STYLE)
-        gl = QVBoxLayout()
-
-        gl.addWidget(self._svg_label("sketches_polygon.svg", svg_w, svg_h))
-
-        desc = QLabel("Clicca su un poligono in mappa")
+        row.addWidget(btn)
+        desc = QLabel("Disegna un rettangolo sulla mappa")
+        desc.setStyleSheet(self._DESC_STYLE)
         desc.setWordWrap(True)
-        desc.setStyleSheet("font-weight: normal; font-size: 10px;")
-        desc.setAlignment(_AlignCenter)
-        gl.addWidget(desc)
+        row.addWidget(desc, 1)
+        return w
 
-        gl.addStretch()
-
+    def _row_poligono(self, ico_w, ico_h):
+        w, row = self._make_row()
+        row.addWidget(self._svg_label("sketches_polygon.svg", ico_w, ico_h))
         btn = QPushButton("Seleziona Poligono")
-        btn.setMinimumHeight(34)
-        btn.setStyleSheet(
-            "QPushButton { background-color: #00897B; color: white; "
-            "font-size: 11px; font-weight: bold; border: none; "
-            "border-radius: 4px; }"
-            "QPushButton:hover { background-color: #006B5E; }"
-        )
+        btn.setMinimumHeight(32)
+        btn.setMinimumWidth(160)
+        btn.setStyleSheet(self._BTN_STYLE.format(color="#00897B", hover="#006B5E"))
         btn.clicked.connect(self._on_poligono)
-        gl.addWidget(btn)
-
-        group.setLayout(gl)
-        return group
-
-    def _cell_linea(self, svg_w, svg_h):
-        """Cella (1,0): Seleziona Linea con buffer."""
-        group = QGroupBox("Seleziona o disegna Linea")
-        group.setStyleSheet(self._CELL_STYLE)
-        gl = QVBoxLayout()
-
-        gl.addWidget(self._svg_label("sketches_line.svg", svg_w, svg_h))
-
-        desc = QLabel("Clicca su una linea o disegna una polilinea")
+        row.addWidget(btn)
+        desc = QLabel("Clicca su un poligono in mappa")
+        desc.setStyleSheet(self._DESC_STYLE)
         desc.setWordWrap(True)
-        desc.setStyleSheet("font-weight: normal; font-size: 10px;")
-        desc.setAlignment(_AlignCenter)
-        gl.addWidget(desc)
+        row.addWidget(desc, 1)
+        return w
 
-        # Buffer: label + spinbox sulla stessa riga
-        buf_row = QHBoxLayout()
+    def _row_linea(self, ico_w, ico_h):
+        w, row = self._make_row()
+        row.addWidget(self._svg_label("sketches_line.svg", ico_w, ico_h))
+        btn = QPushButton("Seleziona Linea")
+        btn.setMinimumHeight(32)
+        btn.setMinimumWidth(160)
+        btn.setStyleSheet(self._BTN_STYLE.format(color="#F57F17", hover="#E65100"))
+        btn.clicked.connect(self._on_asse)
+        row.addWidget(btn)
         buf_lbl = QLabel("Buffer:")
-        buf_lbl.setStyleSheet("font-weight: normal; font-size: 10px;")
-        buf_row.addWidget(buf_lbl)
+        buf_lbl.setStyleSheet(self._LBL_STYLE)
+        row.addWidget(buf_lbl)
         self.buffer_spinbox = QSpinBox()
         self.buffer_spinbox.setRange(0, 100)
         self.buffer_spinbox.setValue(self._default_buffer_m)
         self.buffer_spinbox.setSuffix(" m")
-        self.buffer_spinbox.setStyleSheet(
-            "QSpinBox { font-size: 11px; padding: 2px; }"
-        )
+        self.buffer_spinbox.setFixedWidth(68)
+        self.buffer_spinbox.setStyleSheet("QSpinBox { font-size: 11px; padding: 2px; }")
         self.buffer_spinbox.valueChanged.connect(self._on_buffer_changed)
-        buf_row.addWidget(self.buffer_spinbox)
-        buf_row.addStretch()
-        gl.addLayout(buf_row)
-
-        gl.addStretch()
-
-        btn = QPushButton("Seleziona o disegna Linea")
-        btn.setMinimumHeight(34)
-        btn.setStyleSheet(
-            "QPushButton { background-color: #FF6D00; color: white; "
-            "font-size: 11px; font-weight: bold; border: none; "
-            "border-radius: 4px; }"
-            "QPushButton:hover { background-color: #E65100; }"
-        )
-        btn.clicked.connect(self._on_asse)
-        gl.addWidget(btn)
-
-        group.setLayout(gl)
-        return group
-
-    def _cell_punti(self, svg_w, svg_h):
-        """Cella (1,1): Seleziona Punti con buffer."""
-        group = QGroupBox("Seleziona Punti")
-        group.setStyleSheet(self._CELL_STYLE)
-        gl = QVBoxLayout()
-
-        gl.addWidget(self._svg_label("sketches_points.svg", svg_w, svg_h))
-
-        desc = QLabel("Clicca su layer di punti per scaricare")
+        row.addWidget(self.buffer_spinbox)
+        desc = QLabel("Clicca su una linea o disegna una polilinea")
+        desc.setStyleSheet(self._DESC_STYLE)
         desc.setWordWrap(True)
-        desc.setStyleSheet("font-weight: normal; font-size: 10px;")
-        desc.setAlignment(_AlignCenter)
-        gl.addWidget(desc)
+        row.addWidget(desc, 1)
+        return w
 
-        # Buffer + Snap sulla stessa riga
-        params_row = QHBoxLayout()
+    def _row_punti(self, ico_w, ico_h):
+        """Riga Seleziona Punti: riga principale + sotto-riga per Sorgente/Aggiungi a."""
+        outer = QWidget()
+        vbox = QVBoxLayout(outer)
+        vbox.setContentsMargins(2, 2, 2, 2)
+        vbox.setSpacing(2)
+
+        # Riga principale: SVG + bottone + buffer + snap + descrizione
+        main_row = QHBoxLayout()
+        main_row.setSpacing(8)
+        main_row.addWidget(self._svg_label("sketches_points.svg", ico_w, ico_h))
+        btn = QPushButton("Seleziona Punti")
+        btn.setMinimumHeight(32)
+        btn.setMinimumWidth(160)
+        btn.setStyleSheet(self._BTN_STYLE.format(color="#7B1FA2", hover="#6A1B9A"))
+        btn.clicked.connect(self._on_punti)
+        main_row.addWidget(btn)
         buf_lbl = QLabel("Buffer:")
-        buf_lbl.setStyleSheet("font-weight: normal; font-size: 10px;")
-        params_row.addWidget(buf_lbl)
+        buf_lbl.setStyleSheet(self._LBL_STYLE)
+        main_row.addWidget(buf_lbl)
         self.buffer_punti_spinbox = QSpinBox()
         self.buffer_punti_spinbox.setRange(0, 100)
         self.buffer_punti_spinbox.setValue(self._default_buffer_punti_m)
         self.buffer_punti_spinbox.setSuffix(" m")
-        self.buffer_punti_spinbox.setStyleSheet(
-            "QSpinBox { font-size: 11px; padding: 2px; }"
-        )
-        self.buffer_punti_spinbox.valueChanged.connect(
-            self._on_buffer_punti_changed
-        )
-        params_row.addWidget(self.buffer_punti_spinbox)
+        self.buffer_punti_spinbox.setFixedWidth(68)
+        self.buffer_punti_spinbox.setStyleSheet("QSpinBox { font-size: 11px; padding: 2px; }")
+        self.buffer_punti_spinbox.valueChanged.connect(self._on_buffer_punti_changed)
+        main_row.addWidget(self.buffer_punti_spinbox)
         snap_lbl = QLabel("Snap:")
-        snap_lbl.setStyleSheet("font-weight: normal; font-size: 10px;")
-        params_row.addWidget(snap_lbl)
+        snap_lbl.setStyleSheet(self._LBL_STYLE)
+        main_row.addWidget(snap_lbl)
         self.snap_spinbox = QSpinBox()
         self.snap_spinbox.setRange(1, 50)
         self.snap_spinbox.setValue(self._default_snap_px)
         self.snap_spinbox.setSuffix(" px")
-        self.snap_spinbox.setStyleSheet(
-            "QSpinBox { font-size: 11px; padding: 2px; }"
-        )
+        self.snap_spinbox.setFixedWidth(68)
+        self.snap_spinbox.setStyleSheet("QSpinBox { font-size: 11px; padding: 2px; }")
         self.snap_spinbox.valueChanged.connect(self._on_snap_changed)
-        params_row.addWidget(self.snap_spinbox)
-        params_row.addStretch()
-        gl.addLayout(params_row)
+        main_row.addWidget(self.snap_spinbox)
+        desc = QLabel("Clicca su layer di punti per scaricare")
+        desc.setStyleSheet(self._DESC_STYLE)
+        desc.setWordWrap(True)
+        main_row.addWidget(desc, 1)
+        vbox.addLayout(main_row)
 
-        # Layer sorgente punti
-        src_row = QHBoxLayout()
+        # Sotto-riga: Sorgente + Aggiungi a (rientrata sotto il bottone)
+        sub_row = QHBoxLayout()
+        sub_row.setSpacing(8)
+        sub_row.addSpacing(ico_w + 8)
         src_lbl = QLabel("Sorgente:")
-        src_lbl.setStyleSheet("font-weight: normal; font-size: 10px;")
-        src_row.addWidget(src_lbl)
+        src_lbl.setStyleSheet(self._LBL_STYLE)
+        sub_row.addWidget(src_lbl)
         self.combo_source_layer = QComboBox()
         self.combo_source_layer.addItem("(clicca sulla mappa)", None)
         self.combo_source_layer.setStyleSheet("font-size: 10px;")
@@ -566,17 +477,15 @@ class SceltaModalitaDialog(QDialog):
             "Scegli un layer punti dal progetto oppure lascia\n"
             "'(clicca sulla mappa)' per selezionarlo cliccando."
         )
-        src_row.addWidget(self.combo_source_layer, 1)
-        gl.addLayout(src_row)
-
-        # Layer destinazione (append) — nascosto quando il controllo Output globale è attivo
+        sub_row.addWidget(self.combo_source_layer, 1)
+        # widget_append_row - nascosto quando il controllo Output globale e' attivo
         self.widget_append_row = QWidget()
-        self.widget_append_row.setStyleSheet("font-weight: normal;")
-        app_row = QHBoxLayout(self.widget_append_row)
-        app_row.setContentsMargins(0, 0, 0, 0)
+        app_row_layout = QHBoxLayout(self.widget_append_row)
+        app_row_layout.setContentsMargins(0, 0, 0, 0)
+        app_row_layout.setSpacing(8)
         app_lbl = QLabel("Aggiungi a:")
-        app_lbl.setStyleSheet("font-weight: normal; font-size: 10px;")
-        app_row.addWidget(app_lbl)
+        app_lbl.setStyleSheet(self._LBL_STYLE)
+        app_row_layout.addWidget(app_lbl)
         self.combo_append_layer = QComboBox()
         self.combo_append_layer.addItem("(nuovo layer)", None)
         self.combo_append_layer.setStyleSheet("font-size: 10px;")
@@ -584,26 +493,65 @@ class SceltaModalitaDialog(QDialog):
             "Scegli un layer Particelle WFS esistente a cui aggiungere\n"
             "le nuove particelle, oppure lascia '(nuovo layer)'."
         )
-        app_row.addWidget(self.combo_append_layer, 1)
-        gl.addWidget(self.widget_append_row)
+        app_row_layout.addWidget(self.combo_append_layer, 1)
+        sub_row.addWidget(self.widget_append_row, 1)
+        vbox.addLayout(sub_row)
 
-        gl.addStretch()
+        return outer
 
-        btn = QPushButton("Seleziona Punti")
-        btn.setMinimumHeight(34)
-        btn.setStyleSheet(
-            "QPushButton { background-color: #7B1FA2; color: white; "
-            "font-size: 11px; font-weight: bold; border: none; "
-            "border-radius: 4px; }"
-            "QPushButton:hover { background-color: #6A1B9A; }"
+    def _row_output(self, ico_w, ico_h):
+        w, row = self._make_row()
+        marker = QLabel("⬡")
+        marker.setFixedSize(ico_w, ico_h)
+        marker.setAlignment(_AlignCenter)
+        marker.setStyleSheet(
+            "background-color: #E3F2FD; border-radius: 4px; "
+            "border: 1px solid #90CAF9; color: #1565C0; font-size: 18px;"
         )
-        btn.clicked.connect(self._on_punti)
-        gl.addWidget(btn)
+        row.addWidget(marker)
+        self.check_output_globale = QCheckBox("Aggiungi a layer esistente:")
+        self.check_output_globale.setStyleSheet(self._LBL_STYLE)
+        self.check_output_globale.setChecked(False)
+        row.addWidget(self.check_output_globale)
+        self.combo_output_globale = QComboBox()
+        self.combo_output_globale.setStyleSheet("font-size: 10px;")
+        self.combo_output_globale.setEnabled(False)
+        self.combo_output_globale.setToolTip(
+            "Layer Particelle WFS esistente a cui accodare i risultati\n"
+            "di qualsiasi modalita' di download."
+        )
+        row.addWidget(self.combo_output_globale, 1)
+        lbl = QLabel("Output")
+        lbl.setStyleSheet("font-size: 10px; color: #1565C0; font-weight: bold;")
+        row.addWidget(lbl)
+        return w
 
-        group.setLayout(gl)
-        return group
+    def _row_opzioni(self, ico_w, ico_h):
+        w, row = self._make_row()
+        marker = QLabel("⚙")
+        marker.setFixedSize(ico_w, ico_h)
+        marker.setAlignment(_AlignCenter)
+        marker.setStyleSheet(
+            "background-color: #F3E5F5; border-radius: 4px; "
+            "border: 1px solid #CE93D8; color: #6A1B9A; font-size: 18px;"
+        )
+        row.addWidget(marker)
+        self.check_espandi_catastale = QCheckBox(
+            "Espandi riferimento catastale (sezione, foglio, allegato, sviluppo)"
+        )
+        self.check_espandi_catastale.setStyleSheet(self._LBL_STYLE)
+        self.check_espandi_catastale.setChecked(False)
+        row.addWidget(self.check_espandi_catastale)
+        self.check_carica_wms = QCheckBox("Carica WMS Cartografia Catastale")
+        self.check_carica_wms.setStyleSheet(self._LBL_STYLE)
+        self.check_carica_wms.setChecked(False)
+        row.addWidget(self.check_carica_wms)
+        lbl = QLabel("Opzioni")
+        lbl.setStyleSheet("font-size: 10px; color: #6A1B9A; font-weight: bold;")
+        row.addWidget(lbl)
+        return w
 
-    # ---- Helpers ----
+        # ---- Helpers ----
 
     def _svg_label(self, filename, max_w=140, max_h=121):
         """Crea una QLabel con l'immagine SVG dalla cartella sketches."""
