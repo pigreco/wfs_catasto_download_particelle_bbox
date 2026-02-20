@@ -872,6 +872,17 @@ def esegui_download_e_caricamento(min_lat, min_lon, max_lat, max_lon, filter_geo
         idx_allegato = mem_layer.fields().indexOf("allegato")
         idx_sviluppo = mem_layer.fields().indexOf("sviluppo")
         idx_ncr = layer_info["fields"].indexOf("NATIONALCADASTRALREFERENCE")
+        # In append: avvisa se il layer esistente non ha i campi espansi
+        if is_append and any(i < 0 for i in [idx_sezione, idx_foglio, idx_allegato, idx_sviluppo]):
+            QMessageBox.warning(
+                qgis_iface.mainWindow(),
+                "Campi catastali mancanti",
+                "Il layer di destinazione non contiene i campi del riferimento "
+                "catastale espanso (sezione, foglio, allegato, sviluppo).\n\n"
+                "I dati verranno aggiunti senza quei campi.\n\n"
+                "Suggerimento: disattiva 'Espandi riferimento catastale' oppure "
+                "scegli 'nuovo layer' come destinazione.",
+            )
 
     # Copia feature con attributi di segnalazione
     new_features = []
