@@ -506,9 +506,9 @@ class SceltaModalitaDialog(QDialog):
             "di qualsiasi modalita' di download."
         )
         row.addWidget(self.combo_output_globale, 1)
-        lbl = QLabel("Output")
+        lbl = QLabel("OUTPUT")
+        lbl.setFixedWidth(55)
         lbl.setStyleSheet("font-size: 10px; color: #1565C0; font-weight: bold;")
-        row.addWidget(lbl)
         return w
 
     def _row_opzioni(self):
@@ -523,9 +523,9 @@ class SceltaModalitaDialog(QDialog):
         self.check_carica_wms.setStyleSheet(self._LBL_STYLE)
         self.check_carica_wms.setChecked(False)
         row.addWidget(self.check_carica_wms)
-        lbl = QLabel("Opzioni")
+        lbl = QLabel("OPZIONI")
+        lbl.setFixedWidth(55)
         lbl.setStyleSheet("font-size: 10px; color: #6A1B9A; font-weight: bold;")
-        row.addWidget(lbl)
         return w
 
         # ---- Helpers ----
