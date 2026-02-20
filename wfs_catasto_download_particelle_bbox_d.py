@@ -293,8 +293,11 @@ class SceltaModalitaDialog(QDialog):
 
         # --- Righe modalità ---
         layout.addWidget(self._row_bbox())
+        layout.addWidget(self._make_sep())
         layout.addWidget(self._row_poligono())
+        layout.addWidget(self._make_sep())
         layout.addWidget(self._row_linea())
+        layout.addWidget(self._make_sep())
         layout.addWidget(self._row_punti())
 
         # --- Separatore ---
@@ -359,6 +362,13 @@ class SceltaModalitaDialog(QDialog):
         row.setContentsMargins(2, 2, 2, 2)
         row.setSpacing(8)
         return w, row
+
+    def _make_sep(self):
+        """Crea una linea separatrice orizzontale."""
+        sep = QFrame()
+        sep.setFrameShape(QFrame.Shape.HLine if hasattr(QFrame, 'Shape') else QFrame.HLine)
+        sep.setStyleSheet("color: #ddd;")
+        return sep
 
     def _row_bbox(self):
         w, row = self._make_row()
