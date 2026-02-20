@@ -22,6 +22,7 @@ from qgis.PyQt.QtWidgets import (
     QPushButton,
     QSpinBox,
     QCheckBox,
+    QScrollArea,
     QWidget,
     QFrame,
     QMessageBox,
