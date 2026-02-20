@@ -872,6 +872,21 @@ def esegui_download_e_caricamento(min_lat, min_lon, max_lat, max_lon, filter_geo
         idx_allegato = mem_layer.fields().indexOf("allegato")
         idx_sviluppo = mem_layer.fields().indexOf("sviluppo")
         idx_ncr = layer_info["fields"].indexOf("NATIONALCADASTRALREFERENCE")
+        # In append: avvisa se il layer esistente non ha i campi espansi
+        if is_append and any(i < 0 for i in [idx_sezione, idx_foglio, idx_allegato, idx_sviluppo]):
+            risposta = QMessageBox.warning(
+                qgis_iface.mainWindow(),
+                "Campi catastali mancanti",
+                "Il layer di destinazione non contiene i campi del riferimento "
+                "catastale espanso (sezione, foglio, allegato, sviluppo).\n\n"
+                "Vuoi aggiungere comunque i dati (senza quei campi)?\n\n"
+                "Suggerimento: disattiva 'Espandi riferimento catastale' oppure "
+                "scegli 'nuovo layer' come destinazione.",
+                QMessageBox.Yes | QMessageBox.No,
+                QMessageBox.No,
+            )
+            if risposta == QMessageBox.No:
+                return None
 
     # Copia feature con attributi di segnalazione
     new_features = []
@@ -898,13 +913,18 @@ def esegui_download_e_caricamento(min_lat, min_lon, max_lat, max_lon, filter_geo
                 codice = ncr.split(".")[0]  # parte prima del punto
                 if len(codice) == 11:  # CCCCZFFFFAS = 11 caratteri
                     sez = codice[4]  # Z: sezione censuaria
-                    new_feat.setAttribute(idx_sezione, "" if sez == "_" else sez)
+                    if idx_sezione >= 0:
+                        new_feat.setAttribute(idx_sezione, "" if sez == "_" else sez)
                     try:
-                        new_feat.setAttribute(idx_foglio, int(codice[5:9]))
+                        if idx_foglio >= 0:
+                            new_feat.setAttribute(idx_foglio, int(codice[5:9]))
                     except ValueError:
-                        new_feat.setAttribute(idx_foglio, None)
-                    new_feat.setAttribute(idx_allegato, codice[9])
-                    new_feat.setAttribute(idx_sviluppo, codice[10])
+                        if idx_foglio >= 0:
+                            new_feat.setAttribute(idx_foglio, None)
+                    if idx_allegato >= 0:
+                        new_feat.setAttribute(idx_allegato, codice[9])
+                    if idx_sviluppo >= 0:
+                        new_feat.setAttribute(idx_sviluppo, codice[10])
 
         new_features.append(new_feat)
 
@@ -1027,13 +1047,14 @@ class BBoxDrawTool(QgsMapTool):
     """
 
     def __init__(self, canvas, on_completed=None, espandi_catastale=False,
-                 carica_wms=False):
+                 carica_wms=False, append_to_layer=None):
         super().__init__(canvas)
         self.canvas = canvas
         self.first_point = None
         self.preview_rb = None
         self.on_completed = on_completed
         self.espandi_catastale = espandi_catastale
+        self.append_to_layer = append_to_layer
         self.carica_wms = carica_wms
         self._create_preview_rubberband()
 
@@ -1089,6 +1110,7 @@ class BBoxDrawTool(QgsMapTool):
                 layer_name="Particelle WFS (BBox)",
                 espandi_catastale=self.espandi_catastale,
                 carica_wms=self.carica_wms,
+                append_to_layer=self.append_to_layer,
             )
 
             # Ripristina Pan e riapri dialog
@@ -1129,12 +1151,13 @@ class PolySelectTool(QgsMapTool):
     """
 
     def __init__(self, canvas, on_completed=None, espandi_catastale=False,
-                 carica_wms=False):
+                 carica_wms=False, append_to_layer=None):
         super().__init__(canvas)
         self.canvas = canvas
         self.on_completed = on_completed
         self.espandi_catastale = espandi_catastale
         self.carica_wms = carica_wms
+        self.append_to_layer = append_to_layer
 
     def canvasPressEvent(self, event):
         click_map_point = self.toMapCoordinates(event.pos())
@@ -1225,6 +1248,7 @@ class PolySelectTool(QgsMapTool):
                     layer_name="Particelle WFS (Poligono)",
                     espandi_catastale=self.espandi_catastale,
                     carica_wms=self.carica_wms,
+                    append_to_layer=self.append_to_layer,
                 )
 
                 qgis_iface.actionPan().trigger()
@@ -1257,13 +1281,14 @@ class LineSelectTool(QgsMapTool):
     """
 
     def __init__(self, canvas, buffer_distance=BUFFER_DISTANCE_M, on_completed=None,
-                 espandi_catastale=False, carica_wms=False):
+                 espandi_catastale=False, carica_wms=False, append_to_layer=None):
         super().__init__(canvas)
         self.canvas = canvas
         self.buffer_distance = buffer_distance
         self.buffer_rb = None  # Rubberband per visualizzare il buffer
         self.espandi_catastale = espandi_catastale
         self.carica_wms = carica_wms
+        self.append_to_layer = append_to_layer
         self.on_completed = on_completed
         # Stato per modalità disegno polilinea
         self._draw_points = []  # Vertici della polilinea in coordinate mappa
@@ -1334,6 +1359,7 @@ class LineSelectTool(QgsMapTool):
             layer_name=f"Particelle WFS (Linea buffer {self.buffer_distance} m)",
             espandi_catastale=self.espandi_catastale,
             carica_wms=self.carica_wms,
+            append_to_layer=self.append_to_layer,
         )
 
         qgis_iface.actionPan().trigger()
@@ -2035,6 +2061,7 @@ class WfsCatastoDownloadParticelleBbox:
         canvas = self.iface.mapCanvas()
         espandi = dlg.espandi_catastale
         wms = dlg.carica_wms
+        append_globale = dlg.output_globale_layer
 
         if dlg.scelta == "disegna":
             print("\n  MODALITÀ: Disegna BBox")
@@ -2042,8 +2069,11 @@ class WfsCatastoDownloadParticelleBbox:
             print("  >>> Muovi il mouse per l'anteprima")
             print("  >>> Clicca per il SECONDO angolo")
             print("  >>> Il download partirà automaticamente\n")
+            if append_globale is not None:
+                print(f"  >>> Output globale: aggiungi a '{append_globale.name()}'\n")
             tool = BBoxDrawTool(canvas, on_completed=self._reopen_dialog,
-                                espandi_catastale=espandi, carica_wms=wms)
+                                espandi_catastale=espandi, carica_wms=wms,
+                                append_to_layer=append_globale)
             canvas.setMapTool(tool)
             self._active_tool = tool
 
@@ -2052,8 +2082,11 @@ class WfsCatastoDownloadParticelleBbox:
             print("  >>> Clicca su un poligono nella mappa")
             print("  >>> Il bbox verrà estratto e il CRS verificato")
             print("  >>> Il download partirà automaticamente\n")
+            if append_globale is not None:
+                print(f"  >>> Output globale: aggiungi a '{append_globale.name()}'\n")
             tool = PolySelectTool(canvas, on_completed=self._reopen_dialog,
-                                  espandi_catastale=espandi, carica_wms=wms)
+                                  espandi_catastale=espandi, carica_wms=wms,
+                                  append_to_layer=append_globale)
             canvas.setMapTool(tool)
             self._active_tool = tool
 
@@ -2064,9 +2097,12 @@ class WfsCatastoDownloadParticelleBbox:
             print(f"  >>> Verrà creato un buffer di {buffer_m}m")
             print("  >>> Verranno scaricate solo le particelle che intersecano il buffer")
             print("  >>> ATTENZIONE: Il layer deve avere un CRS proiettato (metri)\n")
+            if append_globale is not None:
+                print(f"  >>> Output globale: aggiungi a '{append_globale.name()}'\n")
             tool = LineSelectTool(canvas, buffer_distance=buffer_m,
                                   on_completed=self._reopen_dialog,
-                                  espandi_catastale=espandi, carica_wms=wms)
+                                  espandi_catastale=espandi, carica_wms=wms,
+                                  append_to_layer=append_globale)
             canvas.setMapTool(tool)
             self._active_tool = tool
 
