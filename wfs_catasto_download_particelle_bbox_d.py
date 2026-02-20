@@ -291,6 +291,14 @@ class SceltaModalitaDialog(QDialog):
 
         layout.addSpacing(4)
 
+        # Linea spessa sotto il titolo
+        sep_title = QFrame()
+        sep_title.setFrameShape(QFrame.Shape.HLine if hasattr(QFrame, 'Shape') else QFrame.HLine)
+        sep_title.setStyleSheet("border: none; border-top: 2px solid #aaa;")
+        layout.addWidget(sep_title)
+
+        layout.addSpacing(2)
+
         # --- Righe modalità ---
         layout.addWidget(self._row_bbox())
         layout.addWidget(self._make_sep())
