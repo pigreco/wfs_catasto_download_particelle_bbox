@@ -124,23 +124,23 @@ L'autore declina ogni responsabilità per eventuali usi impropri del plugin o pe
 
 ## Changelog
 
-- **1.5.0** - Output Unificato: checkbox + combo globale per accodare i risultati di qualsiasi modalità (BBox, Poligono, Linea, Punti) a un layer Particelle WFS esistente; GUI completamente ridisegnata con layout compatto a lista verticale e separatori; fix crash `KeyError: '-1'` con "Espandi riferimento catastale" in modalità append — avviso con scelta Sì/No prima di procedere
-- **1.4.11** - Fix logica "Seleziona Punti": separazione netta tra Sorgente=(clicca sulla mappa) [solo singola particella per click, sessione ESC] e Sorgente=layer [processing automatico senza click interattivi]; refactoring try/finally garantisce chiusura tool anche su errore; messaggio "Nessuna feature" migliorato con suggerimento per punti in mare
-- **1.4.10** - Fix: combo "Sorgente" si azzera a "(clicca sulla mappa)" alla riapertura del dialogo; notifica nella barra messaggi QGIS con il conteggio feature caricate/aggiunte (sia per nuovo layer che per append)
-- **1.4.9** - Modalità Seleziona Punti: nuova combo "Sorgente" per scegliere un layer di punti dal dialogo senza cliccare in mappa; nuova combo "Aggiungi a" per appendere le particelle a un layer Particelle WFS esistente (risolve issue [#6](https://github.com/pigreco/wfs_catasto_download_particelle_bbox/issues/6))
-- **1.4.8** - Modalità Seleziona Punti: click singolo con accumulo feature nello stesso layer di sessione (append), deduplicazione cross-click, ESC affidabile con QShortcut
-- **1.4.7** - Miglioramenti interfaccia: riorganizzato layout bottoni ("Chiudi" 3/4 spazio, "Guida" 1/4), aggiunta voce "Guida" nel menu Plugin
-- **1.4.6** - Sistema help integrato con GitHub Pages (bottone "Aiuto" → documentazione online completa)
-- **1.4.5** - Sottomenu nel menu Plugin con "Avvia Download Particelle Catastali" e "Informazioni", dialog AboutDialog completo con link GitHub e riferimenti WFS/WMS, fix compatibilità Qt5/Qt6
-- **1.4.4** - Stile automatico rule-based per particelle (arancione), strade (grigio), acque (blu) con conteggio feature in legenda
-- **1.4.3** - WMS Cartografia Catastale AdE (7 sublayer), connessione WMS auto nel profilo, posizionamento sopra basemap XYZ, versione plugin nel titolo GUI
-- **1.4.2** - Funzione `get_particella_info($geometry)` per il calcolatore di campi
-- **1.4.1** - Disegno polilinea nella modalità Linea, licenza CC-BY 4.0 cliccabile, link cliccabili nell'avviso, fix GUI in primo piano
-- **1.4.0** - Nuova modalità Seleziona Punti, GUI griglia 2x2, tasto ESC
-- **1.3.0** - Illustrazioni SVG nella GUI, icona SVG
-- **1.2.0** - Ottimizzazione filtro spaziale modalità Poligono
-- **1.1.0** - Espansione riferimento catastale (sezione, foglio, allegato, sviluppo)
-- **1.0.0** - Prima release
+- **[1.5.0](https://github.com/pigreco/wfs_catasto_download_particelle_bbox/releases/tag/v1.5.0)** - Output Unificato: checkbox + combo globale per accodare i risultati di qualsiasi modalità (BBox, Poligono, Linea, Punti) a un layer Particelle WFS esistente; GUI completamente ridisegnata con layout compatto a lista verticale e separatori; fix crash `KeyError: '-1'` con "Espandi riferimento catastale" in modalità append — avviso con scelta Sì/No prima di procedere
+- **[1.4.11](https://github.com/pigreco/wfs_catasto_download_particelle_bbox/releases/tag/v1.4.11)** - Fix logica "Seleziona Punti": separazione netta tra Sorgente=(clicca sulla mappa) [solo singola particella per click, sessione ESC] e Sorgente=layer [processing automatico senza click interattivi]; refactoring try/finally garantisce chiusura tool anche su errore; messaggio "Nessuna feature" migliorato con suggerimento per punti in mare
+- **[1.4.10](https://github.com/pigreco/wfs_catasto_download_particelle_bbox/releases/tag/v1.4.10)** - Fix: combo "Sorgente" si azzera a "(clicca sulla mappa)" alla riapertura del dialogo; notifica nella barra messaggi QGIS con il conteggio feature caricate/aggiunte (sia per nuovo layer che per append)
+- **[1.4.9](https://github.com/pigreco/wfs_catasto_download_particelle_bbox/releases/tag/v1.4.9)** - Modalità Seleziona Punti: nuova combo "Sorgente" per scegliere un layer di punti dal dialogo senza cliccare in mappa; nuova combo "Aggiungi a" per appendere le particelle a un layer Particelle WFS esistente (risolve issue [#6](https://github.com/pigreco/wfs_catasto_download_particelle_bbox/issues/6))
+- **[1.4.8](https://github.com/pigreco/wfs_catasto_download_particelle_bbox/releases/tag/v1.4.8)** - Modalità Seleziona Punti: click singolo con accumulo feature nello stesso layer di sessione (append), deduplicazione cross-click, ESC affidabile con QShortcut
+- **[1.4.7](https://github.com/pigreco/wfs_catasto_download_particelle_bbox/releases/tag/v1.4.7)** - Miglioramenti interfaccia: riorganizzato layout bottoni ("Chiudi" 3/4 spazio, "Guida" 1/4), aggiunta voce "Guida" nel menu Plugin
+- **[1.4.6](https://github.com/pigreco/wfs_catasto_download_particelle_bbox/releases/tag/v1.4.6)** - Sistema help integrato con GitHub Pages (bottone "Aiuto" → documentazione online completa)
+- **[1.4.5](https://github.com/pigreco/wfs_catasto_download_particelle_bbox/releases/tag/v1.4.5)** - Sottomenu nel menu Plugin con "Avvia Download Particelle Catastali" e "Informazioni", dialog AboutDialog completo con link GitHub e riferimenti WFS/WMS, fix compatibilità Qt5/Qt6
+- **[1.4.4](https://github.com/pigreco/wfs_catasto_download_particelle_bbox/releases/tag/v1.4.4)** - Stile automatico rule-based per particelle (arancione), strade (grigio), acque (blu) con conteggio feature in legenda
+- **[1.4.3](https://github.com/pigreco/wfs_catasto_download_particelle_bbox/releases/tag/v1.4.3)** - WMS Cartografia Catastale AdE (7 sublayer), connessione WMS auto nel profilo, posizionamento sopra basemap XYZ, versione plugin nel titolo GUI
+- **[1.4.2](https://github.com/pigreco/wfs_catasto_download_particelle_bbox/releases/tag/v1.4.2)** - Funzione `get_particella_info($geometry)` per il calcolatore di campi
+- **[1.4.1](https://github.com/pigreco/wfs_catasto_download_particelle_bbox/releases/tag/v1.4.1)** - Disegno polilinea nella modalità Linea, licenza CC-BY 4.0 cliccabile, link cliccabili nell'avviso, fix GUI in primo piano
+- **[1.4.0](https://github.com/pigreco/wfs_catasto_download_particelle_bbox/releases/tag/v1.4.0)** - Nuova modalità Seleziona Punti, GUI griglia 2x2, tasto ESC
+- **[1.3.0](https://github.com/pigreco/wfs_catasto_download_particelle_bbox/releases/tag/v1.3.0)** - Illustrazioni SVG nella GUI, icona SVG
+- **[1.2.0](https://github.com/pigreco/wfs_catasto_download_particelle_bbox/releases/tag/v1.2.0)** - Ottimizzazione filtro spaziale modalità Poligono
+- **[1.1.0](https://github.com/pigreco/wfs_catasto_download_particelle_bbox/releases/tag/v1.1.0)** - Espansione riferimento catastale (sezione, foglio, allegato, sviluppo)
+- **[1.0.0](https://github.com/pigreco/wfs_catasto_download_particelle_bbox/releases/tag/v1.0.0)** - Prima release
 
 ## Licenza
 
