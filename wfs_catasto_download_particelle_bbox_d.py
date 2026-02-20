@@ -227,21 +227,36 @@ class SceltaModalitaDialog(QDialog):
         # Non ripristinare la selezione: ogni operazione parte da "(clicca sulla mappa)"
         self.combo_source_layer.blockSignals(False)
 
-        # --- Layer destinazione append ---
+        # --- Layer destinazione append (locale Punti e globale) ---
+        polygon_layers = [
+            layer for layer in QgsProject.instance().mapLayers().values()
+            if isinstance(layer, QgsVectorLayer) and _is_polygon_layer(layer)
+            and ("Particelle" in layer.name() or "WFS" in layer.name())
+        ]
+
         self.combo_append_layer.blockSignals(True)
         current_append_id = self.combo_append_layer.currentData()
         self.combo_append_layer.clear()
         self.combo_append_layer.addItem("(nuovo layer)", None)
-        for layer in QgsProject.instance().mapLayers().values():
-            if isinstance(layer, QgsVectorLayer) and _is_polygon_layer(layer):
-                if "Particelle" in layer.name() or "WFS" in layer.name():
-                    self.combo_append_layer.addItem(layer.name(), layer.id())
-        # Ripristina selezione precedente se ancora presente
+        for layer in polygon_layers:
+            self.combo_append_layer.addItem(layer.name(), layer.id())
         if current_append_id is not None:
             idx = self.combo_append_layer.findData(current_append_id)
             if idx >= 0:
                 self.combo_append_layer.setCurrentIndex(idx)
         self.combo_append_layer.blockSignals(False)
+
+        self.combo_output_globale.blockSignals(True)
+        current_global_id = self.combo_output_globale.currentData()
+        self.combo_output_globale.clear()
+        self.combo_output_globale.addItem("(seleziona layer...)", None)
+        for layer in polygon_layers:
+            self.combo_output_globale.addItem(layer.name(), layer.id())
+        if current_global_id is not None:
+            idx = self.combo_output_globale.findData(current_global_id)
+            if idx >= 0:
+                self.combo_output_globale.setCurrentIndex(idx)
+        self.combo_output_globale.blockSignals(False)
 
     def _init_ui(self):
         ver = _plugin_version()
@@ -298,6 +313,38 @@ class SceltaModalitaDialog(QDialog):
         grid.addWidget(self._cell_punti(svg_w, svg_h), 1, 1)
 
         layout.addLayout(grid)
+
+        # --- Output unificato ---
+        group_output = QGroupBox("Output")
+        group_output.setStyleSheet(self._CELL_STYLE)
+        gout_layout = QVBoxLayout()
+
+        self.check_output_globale = QCheckBox(
+            "Aggiungi a layer esistente (tutte le modalità)"
+        )
+        self.check_output_globale.setStyleSheet("font-weight: normal;")
+        self.check_output_globale.setChecked(False)
+        gout_layout.addWidget(self.check_output_globale)
+
+        combo_out_row = QHBoxLayout()
+        combo_out_lbl = QLabel("Layer destinazione:")
+        combo_out_lbl.setStyleSheet("font-weight: normal; font-size: 10px;")
+        combo_out_row.addWidget(combo_out_lbl)
+        self.combo_output_globale = QComboBox()
+        self.combo_output_globale.setStyleSheet("font-size: 10px;")
+        self.combo_output_globale.setEnabled(False)
+        self.combo_output_globale.setToolTip(
+            "Layer Particelle WFS esistente a cui accodare i risultati\n"
+            "di qualsiasi modalità di download."
+        )
+        combo_out_row.addWidget(self.combo_output_globale, 1)
+        gout_layout.addLayout(combo_out_row)
+
+        group_output.setLayout(gout_layout)
+        layout.addWidget(group_output)
+
+        # Connessione checkbox → abilita/disabilita combo e mostra/nasconde app_row locale
+        self.check_output_globale.toggled.connect(self._on_output_globale_toggled)
 
         # --- Opzioni ---
         group_opzioni = QGroupBox("Opzioni")
@@ -518,8 +565,11 @@ class SceltaModalitaDialog(QDialog):
         src_row.addWidget(self.combo_source_layer, 1)
         gl.addLayout(src_row)
 
-        # Layer destinazione (append)
-        app_row = QHBoxLayout()
+        # Layer destinazione (append) — nascosto quando il controllo Output globale è attivo
+        self.widget_append_row = QWidget()
+        self.widget_append_row.setStyleSheet("font-weight: normal;")
+        app_row = QHBoxLayout(self.widget_append_row)
+        app_row.setContentsMargins(0, 0, 0, 0)
         app_lbl = QLabel("Aggiungi a:")
         app_lbl.setStyleSheet("font-weight: normal; font-size: 10px;")
         app_row.addWidget(app_lbl)
@@ -531,7 +581,7 @@ class SceltaModalitaDialog(QDialog):
             "le nuove particelle, oppure lascia '(nuovo layer)'."
         )
         app_row.addWidget(self.combo_append_layer, 1)
-        gl.addLayout(app_row)
+        gl.addWidget(self.widget_append_row)
 
         gl.addStretch()
 
@@ -599,6 +649,11 @@ class SceltaModalitaDialog(QDialog):
         self.scelta = "punti"
         self.accept()
 
+    def _on_output_globale_toggled(self, checked):
+        """Abilita/disabilita combo globale e mostra/nasconde app_row locale di Punti."""
+        self.combo_output_globale.setEnabled(checked)
+        self.widget_append_row.setVisible(not checked)
+
     @property
     def selected_point_layer(self):
         """Restituisce il layer punti sorgente selezionato, o None se 'clicca sulla mappa'."""
@@ -609,8 +664,23 @@ class SceltaModalitaDialog(QDialog):
 
     @property
     def append_to_wfs_layer(self):
-        """Restituisce il layer WFS destinazione selezionato, o None se 'nuovo layer'."""
+        """Restituisce il layer WFS destinazione selezionato, o None se 'nuovo layer'.
+
+        Se il controllo Output globale è attivo, ha precedenza sul combo locale.
+        """
+        if self.check_output_globale.isChecked():
+            return self.output_globale_layer
         layer_id = self.combo_append_layer.currentData()
+        if layer_id is None:
+            return None
+        return QgsProject.instance().mapLayer(layer_id)
+
+    @property
+    def output_globale_layer(self):
+        """Restituisce il layer destinazione globale, o None se non attivo/selezionato."""
+        if not self.check_output_globale.isChecked():
+            return None
+        layer_id = self.combo_output_globale.currentData()
         if layer_id is None:
             return None
         return QgsProject.instance().mapLayer(layer_id)
