@@ -898,13 +898,18 @@ def esegui_download_e_caricamento(min_lat, min_lon, max_lat, max_lon, filter_geo
                 codice = ncr.split(".")[0]  # parte prima del punto
                 if len(codice) == 11:  # CCCCZFFFFAS = 11 caratteri
                     sez = codice[4]  # Z: sezione censuaria
-                    new_feat.setAttribute(idx_sezione, "" if sez == "_" else sez)
+                    if idx_sezione >= 0:
+                        new_feat.setAttribute(idx_sezione, "" if sez == "_" else sez)
                     try:
-                        new_feat.setAttribute(idx_foglio, int(codice[5:9]))
+                        if idx_foglio >= 0:
+                            new_feat.setAttribute(idx_foglio, int(codice[5:9]))
                     except ValueError:
-                        new_feat.setAttribute(idx_foglio, None)
-                    new_feat.setAttribute(idx_allegato, codice[9])
-                    new_feat.setAttribute(idx_sviluppo, codice[10])
+                        if idx_foglio >= 0:
+                            new_feat.setAttribute(idx_foglio, None)
+                    if idx_allegato >= 0:
+                        new_feat.setAttribute(idx_allegato, codice[9])
+                    if idx_sviluppo >= 0:
+                        new_feat.setAttribute(idx_sviluppo, codice[10])
 
         new_features.append(new_feat)
 
