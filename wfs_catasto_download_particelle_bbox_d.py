@@ -361,7 +361,7 @@ class SceltaModalitaDialog(QDialog):
         "QPushButton:hover {{ background-color: {hover}; }}"
     )
     _LBL_STYLE = "font-weight: normal; font-size: 10px;"
-    _DESC_STYLE = "font-size: 10px; color: #666;"
+    _DESC_STYLE = "font-size: 12px; color: #000;"
 
     def _make_row(self):
         """Crea un QWidget riga con QHBoxLayout interno."""
@@ -530,7 +530,7 @@ class SceltaModalitaDialog(QDialog):
         row.addWidget(self.combo_output_globale, 1)
         lbl = QLabel("OUTPUT")
         lbl.setFixedWidth(55)
-        lbl.setStyleSheet("font-size: 10px; color: #1565C0; font-weight: bold;")
+        lbl.setStyleSheet("font-size: 10px; color: #333; font-weight: bold;")
         row.addWidget(lbl)
         return w
 
@@ -548,7 +548,7 @@ class SceltaModalitaDialog(QDialog):
         row.addWidget(self.check_carica_wms)
         lbl = QLabel("OPZIONI")
         lbl.setFixedWidth(55)
-        lbl.setStyleSheet("font-size: 10px; color: #6A1B9A; font-weight: bold;")
+        lbl.setStyleSheet("font-size: 10px; color: #333; font-weight: bold;")
         row.addWidget(lbl)
         return w
 
