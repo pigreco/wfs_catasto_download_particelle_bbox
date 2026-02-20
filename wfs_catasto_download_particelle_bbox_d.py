@@ -458,6 +458,8 @@ class SceltaModalitaDialog(QDialog):
         vbox.addLayout(main_row)
 
         # Sotto-riga: Sorgente + Aggiungi a (rientrata sotto il bottone)
+        # La label "Aggiungi a:" è tenuta fuori da widget_append_row così i due
+        # combo occupano esattamente lo stesso spazio (stretch=1 ciascuno).
         sub_row = QHBoxLayout()
         sub_row.setSpacing(8)
         src_lbl = QLabel("Sorgente:")
@@ -472,15 +474,15 @@ class SceltaModalitaDialog(QDialog):
             "'(clicca sulla mappa)' per selezionarlo cliccando."
         )
         sub_row.addWidget(self.combo_source_layer, 1)
-        # widget_append_row - nascosto quando il controllo Output globale e' attivo
+        # label esterna: nascosta insieme a widget_append_row
+        self._app_lbl = QLabel("Aggiungi a:")
+        self._app_lbl.setFixedWidth(68)
+        self._app_lbl.setStyleSheet(self._LBL_STYLE)
+        sub_row.addWidget(self._app_lbl)
+        # widget_append_row contiene solo il combo (nessuna label interna)
         self.widget_append_row = QWidget()
         app_row_layout = QHBoxLayout(self.widget_append_row)
         app_row_layout.setContentsMargins(0, 0, 0, 0)
-        app_row_layout.setSpacing(8)
-        app_lbl = QLabel("Aggiungi a:")
-        app_lbl.setFixedWidth(68)
-        app_lbl.setStyleSheet(self._LBL_STYLE)
-        app_row_layout.addWidget(app_lbl)
         self.combo_append_layer = QComboBox()
         self.combo_append_layer.addItem("(nuovo layer)", None)
         self.combo_append_layer.setStyleSheet("font-size: 10px;")
@@ -488,7 +490,7 @@ class SceltaModalitaDialog(QDialog):
             "Scegli un layer Particelle WFS esistente a cui aggiungere\n"
             "le nuove particelle, oppure lascia '(nuovo layer)'."
         )
-        app_row_layout.addWidget(self.combo_append_layer, 1)
+        app_row_layout.addWidget(self.combo_append_layer)
         sub_row.addWidget(self.widget_append_row, 1)
         vbox.addLayout(sub_row)
 
@@ -585,6 +587,7 @@ class SceltaModalitaDialog(QDialog):
     def _on_output_globale_toggled(self, checked):
         """Abilita/disabilita combo globale e mostra/nasconde app_row locale di Punti."""
         self.combo_output_globale.setEnabled(checked)
+        self._app_lbl.setVisible(not checked)
         self.widget_append_row.setVisible(not checked)
 
     @property
