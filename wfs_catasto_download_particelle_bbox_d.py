@@ -291,14 +291,11 @@ class SceltaModalitaDialog(QDialog):
 
         layout.addSpacing(4)
 
-        # Dimensioni icona SVG per le righe
-        ico_w, ico_h = 56, 44
-
         # --- Righe modalità ---
-        layout.addWidget(self._row_bbox(ico_w, ico_h))
-        layout.addWidget(self._row_poligono(ico_w, ico_h))
-        layout.addWidget(self._row_linea(ico_w, ico_h))
-        layout.addWidget(self._row_punti(ico_w, ico_h))
+        layout.addWidget(self._row_bbox())
+        layout.addWidget(self._row_poligono())
+        layout.addWidget(self._row_linea())
+        layout.addWidget(self._row_punti())
 
         # --- Separatore ---
         sep = QFrame()
@@ -307,10 +304,10 @@ class SceltaModalitaDialog(QDialog):
         layout.addWidget(sep)
 
         # --- Riga Output ---
-        layout.addWidget(self._row_output(ico_w, ico_h))
+        layout.addWidget(self._row_output())
 
         # --- Riga Opzioni ---
-        layout.addWidget(self._row_opzioni(ico_w, ico_h))
+        layout.addWidget(self._row_opzioni())
 
         # Connessione checkbox -> abilita/disabilita combo e mostra/nasconde app_row locale
         self.check_output_globale.toggled.connect(self._on_output_globale_toggled)
@@ -363,9 +360,8 @@ class SceltaModalitaDialog(QDialog):
         row.setSpacing(8)
         return w, row
 
-    def _row_bbox(self, ico_w, ico_h):
+    def _row_bbox(self):
         w, row = self._make_row()
-        row.addWidget(self._svg_label("sketches_bbox.svg", ico_w, ico_h))
         btn = QPushButton("Disegna BBox")
         btn.setMinimumHeight(32)
         btn.setFixedWidth(160)
@@ -378,9 +374,8 @@ class SceltaModalitaDialog(QDialog):
         row.addWidget(desc, 1)
         return w
 
-    def _row_poligono(self, ico_w, ico_h):
+    def _row_poligono(self):
         w, row = self._make_row()
-        row.addWidget(self._svg_label("sketches_polygon.svg", ico_w, ico_h))
         btn = QPushButton("Seleziona Poligono")
         btn.setMinimumHeight(32)
         btn.setFixedWidth(160)
@@ -393,9 +388,8 @@ class SceltaModalitaDialog(QDialog):
         row.addWidget(desc, 1)
         return w
 
-    def _row_linea(self, ico_w, ico_h):
+    def _row_linea(self):
         w, row = self._make_row()
-        row.addWidget(self._svg_label("sketches_line.svg", ico_w, ico_h))
         btn = QPushButton("Seleziona Linea")
         btn.setMinimumHeight(32)
         btn.setFixedWidth(160)
@@ -419,7 +413,7 @@ class SceltaModalitaDialog(QDialog):
         row.addWidget(desc, 1)
         return w
 
-    def _row_punti(self, ico_w, ico_h):
+    def _row_punti(self):
         """Riga Seleziona Punti: riga principale + sotto-riga per Sorgente/Aggiungi a."""
         outer = QWidget()
         vbox = QVBoxLayout(outer)
@@ -429,7 +423,6 @@ class SceltaModalitaDialog(QDialog):
         # Riga principale: SVG + bottone + buffer + snap + descrizione
         main_row = QHBoxLayout()
         main_row.setSpacing(8)
-        main_row.addWidget(self._svg_label("sketches_points.svg", ico_w, ico_h))
         btn = QPushButton("Seleziona Punti")
         btn.setMinimumHeight(32)
         btn.setFixedWidth(160)
@@ -467,7 +460,6 @@ class SceltaModalitaDialog(QDialog):
         # Sotto-riga: Sorgente + Aggiungi a (rientrata sotto il bottone)
         sub_row = QHBoxLayout()
         sub_row.setSpacing(8)
-        sub_row.addSpacing(ico_w + 8)
         src_lbl = QLabel("Sorgente:")
         src_lbl.setStyleSheet(self._LBL_STYLE)
         sub_row.addWidget(src_lbl)
@@ -500,16 +492,8 @@ class SceltaModalitaDialog(QDialog):
 
         return outer
 
-    def _row_output(self, ico_w, ico_h):
+    def _row_output(self):
         w, row = self._make_row()
-        marker = QLabel("⬡")
-        marker.setFixedSize(ico_w, ico_h)
-        marker.setAlignment(_AlignCenter)
-        marker.setStyleSheet(
-            "background-color: #E3F2FD; border-radius: 4px; "
-            "border: 1px solid #90CAF9; color: #1565C0; font-size: 18px;"
-        )
-        row.addWidget(marker)
         self.check_output_globale = QCheckBox("Aggiungi a layer esistente:")
         self.check_output_globale.setStyleSheet(self._LBL_STYLE)
         self.check_output_globale.setChecked(False)
@@ -527,16 +511,8 @@ class SceltaModalitaDialog(QDialog):
         row.addWidget(lbl)
         return w
 
-    def _row_opzioni(self, ico_w, ico_h):
+    def _row_opzioni(self):
         w, row = self._make_row()
-        marker = QLabel("⚙")
-        marker.setFixedSize(ico_w, ico_h)
-        marker.setAlignment(_AlignCenter)
-        marker.setStyleSheet(
-            "background-color: #F3E5F5; border-radius: 4px; "
-            "border: 1px solid #CE93D8; color: #6A1B9A; font-size: 18px;"
-        )
-        row.addWidget(marker)
         self.check_espandi_catastale = QCheckBox(
             "Espandi riferimento catastale (sezione, foglio, allegato, sviluppo)"
         )
