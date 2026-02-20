@@ -69,6 +69,14 @@ Il layer delle particelle viene caricato con uno **stile rule-based** automatico
 
 Il conteggio feature per categoria è visibile in legenda.
 
+### Output Unificato (v1.5.0)
+
+Nella sezione **Output** della finestra di scelta modalità è disponibile il checkbox **"Output"** con una combo che elenca i layer Particelle WFS presenti nel progetto. Quando attivato, i risultati di **qualsiasi modalità** (BBox, Poligono, Linea, Punti) vengono accodati al layer selezionato invece di crearne uno nuovo.
+
+- Il controllo è globale: vale per tutte le modalità senza dover configurare nulla nella singola modalità
+- Il controllo locale "Aggiungi a" della modalità Punti rimane disponibile solo quando l'Output Unificato non è attivo
+- Se il layer di destinazione non contiene i campi del riferimento catastale espanso (sezione, foglio, allegato, sviluppo) e l'opzione "Espandi riferimento catastale" è attiva, il plugin mostra un avviso con scelta **Sì/No** prima di procedere
+
 ### Caratteristiche tecniche
 
 - Download multi-tile con progress bar per aree estese
@@ -77,14 +85,14 @@ Il conteggio feature per categoria è visibile in legenda.
 - Stile automatico rule-based (particelle/strade/acque) con conteggio in legenda
 - Espansione opzionale del riferimento catastale nazionale
 - Caricamento opzionale WMS Cartografia Catastale AdE
-- GUI con illustrazioni SVG e griglia 2x2
+- GUI con layout compatto a lista verticale
 - Versione plugin visualizzata nel titolo della finestra
 - Tasto ESC per annullare qualsiasi modalità
 - Compatibile con QGIS 3 (Qt5) e QGIS 4 (Qt6)
 
 ## Interfaccia
 
-Al primo avvio per sessione QGIS viene mostrato un avviso obbligatorio sull'uso responsabile del plugin. Dopo l'accettazione si accede alla finestra di scelta modalità con griglia 2x2, che permette di navigare la mappa prima di selezionare la modalità.
+Al primo avvio per sessione QGIS viene mostrato un avviso obbligatorio sull'uso responsabile del plugin. Dopo l'accettazione si accede alla finestra di scelta modalità con layout compatto a lista verticale, che permette di navigare la mappa prima di selezionare la modalità.
 
 ![Finestra di avviso e scelta modalità](./screen2.png)
 
@@ -116,6 +124,7 @@ L'autore declina ogni responsabilità per eventuali usi impropri del plugin o pe
 
 ## Changelog
 
+- **1.5.0** - Output Unificato: checkbox + combo globale per accodare i risultati di qualsiasi modalità (BBox, Poligono, Linea, Punti) a un layer Particelle WFS esistente; GUI completamente ridisegnata con layout compatto a lista verticale e separatori; fix crash `KeyError: '-1'` con "Espandi riferimento catastale" in modalità append — avviso con scelta Sì/No prima di procedere
 - **1.4.11** - Fix logica "Seleziona Punti": separazione netta tra Sorgente=(clicca sulla mappa) [solo singola particella per click, sessione ESC] e Sorgente=layer [processing automatico senza click interattivi]; refactoring try/finally garantisce chiusura tool anche su errore; messaggio "Nessuna feature" migliorato con suggerimento per punti in mare
 - **1.4.10** - Fix: combo "Sorgente" si azzera a "(clicca sulla mappa)" alla riapertura del dialogo; notifica nella barra messaggi QGIS con il conteggio feature caricate/aggiunte (sia per nuovo layer che per append)
 - **1.4.9** - Modalità Seleziona Punti: nuova combo "Sorgente" per scegliere un layer di punti dal dialogo senza cliccare in mappa; nuova combo "Aggiungi a" per appendere le particelle a un layer Particelle WFS esistente (risolve issue [#6](https://github.com/pigreco/wfs_catasto_download_particelle_bbox/issues/6))

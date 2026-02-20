@@ -6,7 +6,7 @@
 name=WFS Catasto Download Particelle BBox
 qgisMinimumVersion=3.0
 description=Download particelle catastali dal WFS dell'Agenzia delle Entrate tramite BBox, selezione poligono, linea con buffer o layer di punti.
-version=1.4.11
+version=1.5.0
 author=Salvatore Fiandaca
 email=pigrecoinfinito@gmail.com
 
@@ -30,6 +30,15 @@ repository=https://github.com/pigreco/wfs_catasto_download_particelle_bbox
 
 hasProcessingProvider=no
 changelog=
+    1.5.0 - Output Unificato: nuovo checkbox + combo "Output" per accodare i risultati
+            di qualsiasi modalita' (BBox, Poligono, Linea, Punti) a un layer Particelle
+            WFS esistente. Il controllo globale sostituisce il precedente "Aggiungi a"
+            locale della sola modalita' Punti, ora visibile solo quando Output Unificato
+            non e' attivo. GUI completamente ridisegnata: layout compatto a lista
+            verticale con separatori, bottoni di larghezza fissa, descrizioni brevi
+            inline. Fix crash KeyError '-1' quando "Espandi riferimento catastale" e'
+            attivo in modalita' append su un layer privo dei campi catastali: il plugin
+            mostra ora un avviso con scelta Si'/No prima di procedere.
     1.4.11 - Fix logica 'Seleziona Punti': separazione netta tra le due modalita'.
              Sorgente=(clicca sulla mappa): SOLO download singola particella per
              ogni click (modalita' sessione, ESC per terminare). Rimossa la
