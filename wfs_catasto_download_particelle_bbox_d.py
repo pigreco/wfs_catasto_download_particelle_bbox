@@ -341,7 +341,6 @@ class SceltaModalitaDialog(QDialog):
         gout_layout.addLayout(combo_out_row)
 
         group_output.setLayout(gout_layout)
-        layout.addWidget(group_output)
 
         # Connessione checkbox → abilita/disabilita combo e mostra/nasconde app_row locale
         self.check_output_globale.toggled.connect(self._on_output_globale_toggled)
@@ -363,7 +362,12 @@ class SceltaModalitaDialog(QDialog):
         self.check_carica_wms.setChecked(False)
         go_layout.addWidget(self.check_carica_wms)
         group_opzioni.setLayout(go_layout)
-        layout.addWidget(group_opzioni)
+
+        # --- Output e Opzioni affiancati (stessa riga) ---
+        row_out_opt = QHBoxLayout()
+        row_out_opt.addWidget(group_output, 1)
+        row_out_opt.addWidget(group_opzioni, 1)
+        layout.addLayout(row_out_opt)
 
         # --- Layout per i pulsanti in basso ---
         bottom_layout = QHBoxLayout()
