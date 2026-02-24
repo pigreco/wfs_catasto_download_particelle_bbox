@@ -116,7 +116,7 @@
      ry="14.040078"
      fill="url(#cadastralPattern)"
      id="rect11"
-     style="fill:url(#pattern16);stroke-width:1.17001" />
+     style="fill:url(#cadastralPattern);stroke-width:1.17001" />
   <!-- Strada tortuosa diagonale -->
   <path
      d="M 20,180 Q 36,164 46.666667,153.33333 57.333333,142.66667 68,126.66667 83.999999,110.66667 100,100 116,89.333338 132,73.333339 148,57.333341 164,41.333342 180,25.333343 190.66667,9.3333436"
