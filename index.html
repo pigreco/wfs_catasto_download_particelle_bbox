@@ -347,7 +347,6 @@
                             <li><strong>Buffer:</strong> distanza in metri attorno a ciascun punto (default 1 m)</li>
                             <li><strong>Snap:</strong> tolleranza in pixel per il click sulla mappa</li>
                             <li><strong>Sorgente:</strong> layer di punti da usare come input (opzionale)</li>
-                            <li><strong>Aggiungi a:</strong> layer Particelle WFS esistente in cui accodare le nuove particelle (opzionale)</li>
                         </ul>
                     </div>
 
@@ -358,7 +357,6 @@
                                 <strong>Sorgente = "(clicca sulla mappa)"</strong> — modalità interattiva a click.<br>
                                 Ogni click sulla mappa scarica la particella catastale nel punto cliccato e la accumula nello stesso layer di sessione.
                                 Premi <strong>ESC</strong> per terminare la sessione e riaprire il dialogo.
-                                Se hai impostato <em>Aggiungi a</em>, le particelle vengono accodate al layer selezionato; altrimenti viene creato un nuovo layer al primo click e i click successivi vi vengono aggiunti.
                             </li>
                             <li>
                                 <strong>Sorgente = layer specifico</strong> — modalità automatica.<br>
@@ -369,16 +367,8 @@
                         </ul>
                     </div>
 
-                    <div class="steps">
-                        <h4>Come usare "Aggiungi a":</h4>
-                        <ul>
-                            <li><strong>Aggiungi a = "(nuovo layer)"</strong> — il risultato finisce in un nuovo layer temporaneo (comportamento predefinito)</li>
-                            <li><strong>Aggiungi a = layer esistente</strong> — le particelle vengono accodate al layer Particelle WFS selezionato. La selezione viene mantenuta tra un ciclo e l'altro. Compatibile con entrambe le modalità Sorgente.</li>
-                        </ul>
-                    </div>
-
                     <div class="info">
-                        <strong>💡 Tip:</strong> Le combo <em>Sorgente</em> e <em>Aggiungi a</em> sono combinabili: puoi usare un layer sorgente <strong>e</strong> accodare il risultato a un layer esistente in una sola operazione. Dopo ogni download viene mostrata una notifica nella barra messaggi QGIS con il numero di particelle caricate.
+                        <strong>💡 Tip:</strong> Per accodare i risultati a un layer esistente usa il controllo <strong>OUTPUT</strong> in fondo al dialogo — è globale e funziona con tutte le modalità, inclusa Seleziona Punti. Dopo ogni download viene mostrata una notifica nella barra messaggi QGIS con il numero di particelle caricate.
                     </div>
 
                     <div class="info">
@@ -414,7 +404,7 @@
             </div>
 
             <div class="info">
-                <strong>💡 Tip:</strong> Il controllo è globale: vale per tutte le modalità senza configurare nulla nella singola modalità. Quando Output Unificato è attivo, il controllo locale "Aggiungi a" della modalità Punti viene nascosto per evitare ambiguità.
+                <strong>💡 Tip:</strong> Il controllo è l'unico punto per scegliere il layer di destinazione: vale per tutte le modalità (BBox, Poligono, Linea, Punti) senza configurare nulla nella singola modalità. Se non è attivo, ogni download crea un nuovo layer temporaneo.
             </div>
 
             <div class="warning">

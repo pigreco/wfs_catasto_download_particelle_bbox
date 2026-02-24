@@ -74,7 +74,7 @@ Il conteggio feature per categoria è visibile in legenda.
 Nella sezione **Output** della finestra di scelta modalità è disponibile il checkbox **"Output"** con una combo che elenca i layer Particelle WFS presenti nel progetto. Quando attivato, i risultati di **qualsiasi modalità** (BBox, Poligono, Linea, Punti) vengono accodati al layer selezionato invece di crearne uno nuovo.
 
 - Il controllo è globale: vale per tutte le modalità senza dover configurare nulla nella singola modalità
-- Il controllo locale "Aggiungi a" della modalità Punti rimane disponibile solo quando l'Output Unificato non è attivo
+- È l'unico punto per scegliere il layer di destinazione: il precedente controllo locale "Aggiungi a" nella modalità Punti è stato rimosso
 - Se il layer di destinazione non contiene i campi del riferimento catastale espanso (sezione, foglio, allegato, sviluppo) e l'opzione "Espandi riferimento catastale" è attiva, il plugin mostra un avviso con scelta **Sì/No** prima di procedere
 
 ### Caratteristiche tecniche
