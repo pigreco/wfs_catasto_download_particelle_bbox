@@ -35,17 +35,13 @@
   <defs
      id="defs10">
     <pattern
-       inkscape:collect="always"
-       xlink:href="#cadastralPattern"
-       id="pattern16"
-       patternTransform="matrix(1.1700066,0,0,1.1700066,-17.550098,-17.550098)" />
-    <pattern
        id="cadastralPattern"
        x="0"
        y="0"
        width="120"
        height="120"
-       patternUnits="userSpaceOnUse">
+       patternUnits="userSpaceOnUse"
+       patternTransform="matrix(1.1700066,0,0,1.1700066,-17.550098,-17.550098)">
       <!-- Particelle irregolari molto grandi -->
       <path
          d="M 0,0 L 45,5 L 50,35 L 42,65 L 12,70 L 0,45 Z"
