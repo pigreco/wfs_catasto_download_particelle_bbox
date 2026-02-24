@@ -226,24 +226,12 @@ class SceltaModalitaDialog(QDialog):
         # Non ripristinare la selezione: ogni operazione parte da "(clicca sulla mappa)"
         self.combo_source_layer.blockSignals(False)
 
-        # --- Layer destinazione append (locale Punti e globale) ---
+        # --- Layer destinazione append (globale) ---
         polygon_layers = [
             layer for layer in QgsProject.instance().mapLayers().values()
             if isinstance(layer, QgsVectorLayer) and _is_polygon_layer(layer)
             and ("Particelle" in layer.name() or "WFS" in layer.name())
         ]
-
-        self.combo_append_layer.blockSignals(True)
-        current_append_id = self.combo_append_layer.currentData()
-        self.combo_append_layer.clear()
-        self.combo_append_layer.addItem("(nuovo layer)", None)
-        for layer in polygon_layers:
-            self.combo_append_layer.addItem(layer.name(), layer.id())
-        if current_append_id is not None:
-            idx = self.combo_append_layer.findData(current_append_id)
-            if idx >= 0:
-                self.combo_append_layer.setCurrentIndex(idx)
-        self.combo_append_layer.blockSignals(False)
 
         self.combo_output_globale.blockSignals(True)
         current_global_id = self.combo_output_globale.currentData()
@@ -362,7 +350,7 @@ class SceltaModalitaDialog(QDialog):
         "QPushButton:hover {{ background-color: {hover}; }}"
     )
     _LBL_STYLE = "font-weight: normal; font-size: 10px;"
-    _DESC_STYLE = "font-size: 12px; color: #000;"
+    _DESC_STYLE = "font-size: 12px;"
 
     def _make_row(self):
         """Crea un QWidget riga con QHBoxLayout interno."""
@@ -476,9 +464,7 @@ class SceltaModalitaDialog(QDialog):
         main_row.addWidget(desc, 1)
         vbox.addLayout(main_row)
 
-        # Sotto-riga: Sorgente + Aggiungi a (rientrata sotto il bottone)
-        # La label "Aggiungi a:" è tenuta fuori da widget_append_row così i due
-        # combo occupano esattamente lo stesso spazio (stretch=1 ciascuno).
+        # Sotto-riga: solo Sorgente (rientrata sotto il bottone)
         sub_row = QHBoxLayout()
         sub_row.setSpacing(8)
         src_lbl = QLabel("Sorgente:")
@@ -493,24 +479,6 @@ class SceltaModalitaDialog(QDialog):
             "'(clicca sulla mappa)' per selezionarlo cliccando."
         )
         sub_row.addWidget(self.combo_source_layer, 1)
-        # label esterna: nascosta insieme a widget_append_row
-        self._app_lbl = QLabel("Aggiungi a:")
-        self._app_lbl.setFixedWidth(68)
-        self._app_lbl.setStyleSheet(self._LBL_STYLE)
-        sub_row.addWidget(self._app_lbl)
-        # widget_append_row contiene solo il combo (nessuna label interna)
-        self.widget_append_row = QWidget()
-        app_row_layout = QHBoxLayout(self.widget_append_row)
-        app_row_layout.setContentsMargins(0, 0, 0, 0)
-        self.combo_append_layer = QComboBox()
-        self.combo_append_layer.addItem("(nuovo layer)", None)
-        self.combo_append_layer.setStyleSheet("font-size: 10px;")
-        self.combo_append_layer.setToolTip(
-            "Scegli un layer Particelle WFS esistente a cui aggiungere\n"
-            "le nuove particelle, oppure lascia '(nuovo layer)'."
-        )
-        app_row_layout.addWidget(self.combo_append_layer)
-        sub_row.addWidget(self.widget_append_row, 1)
         vbox.addLayout(sub_row)
 
         return outer
@@ -531,7 +499,7 @@ class SceltaModalitaDialog(QDialog):
         row.addWidget(self.combo_output_globale, 1)
         lbl = QLabel("OUTPUT")
         lbl.setFixedWidth(55)
-        lbl.setStyleSheet("font-size: 10px; color: #333; font-weight: bold;")
+        lbl.setStyleSheet("font-size: 10px; font-weight: bold;")
         row.addWidget(lbl)
         return w
 
@@ -549,7 +517,7 @@ class SceltaModalitaDialog(QDialog):
         row.addWidget(self.check_carica_wms)
         lbl = QLabel("OPZIONI")
         lbl.setFixedWidth(55)
-        lbl.setStyleSheet("font-size: 10px; color: #333; font-weight: bold;")
+        lbl.setStyleSheet("font-size: 10px; font-weight: bold;")
         row.addWidget(lbl)
         return w
 
@@ -604,10 +572,8 @@ class SceltaModalitaDialog(QDialog):
         self.accept()
 
     def _on_output_globale_toggled(self, checked):
-        """Abilita/disabilita combo globale e mostra/nasconde app_row locale di Punti."""
+        """Abilita/disabilita combo globale."""
         self.combo_output_globale.setEnabled(checked)
-        self._app_lbl.setVisible(not checked)
-        self.widget_append_row.setVisible(not checked)
 
     @property
     def selected_point_layer(self):
@@ -619,16 +585,8 @@ class SceltaModalitaDialog(QDialog):
 
     @property
     def append_to_wfs_layer(self):
-        """Restituisce il layer WFS destinazione selezionato, o None se 'nuovo layer'.
-
-        Se il controllo Output globale è attivo, ha precedenza sul combo locale.
-        """
-        if self.check_output_globale.isChecked():
-            return self.output_globale_layer
-        layer_id = self.combo_append_layer.currentData()
-        if layer_id is None:
-            return None
-        return QgsProject.instance().mapLayer(layer_id)
+        """Restituisce il layer WFS destinazione globale, o None se non attivo/selezionato."""
+        return self.output_globale_layer
 
     @property
     def output_globale_layer(self):

@@ -190,6 +190,8 @@ try:
     _Key_Escape = Qt.Key.Key_Escape
     _LeftButton = Qt.MouseButton.LeftButton
     _RightButton = Qt.MouseButton.RightButton
+    _MB_Yes = QMessageBox.StandardButton.Yes
+    _MB_No = QMessageBox.StandardButton.No
 except AttributeError:
     _WindowModal = Qt.WindowModal
     _DashLine = Qt.DashLine
@@ -197,6 +199,8 @@ except AttributeError:
     _Key_Escape = Qt.Key_Escape
     _LeftButton = Qt.LeftButton
     _RightButton = Qt.RightButton
+    _MB_Yes = QMessageBox.Yes
+    _MB_No = QMessageBox.No
 
 
 # =============================================================================
@@ -535,10 +539,10 @@ def esegui_download_e_caricamento(min_lat, min_lon, max_lat, max_lon, filter_geo
             qgis_iface.mainWindow(),
             f"Download multi-tile ({n_tiles} tile)",
             msg,
-            QMessageBox.Yes | QMessageBox.No,
-            QMessageBox.Yes,
+            _MB_Yes | _MB_No,
+            _MB_Yes,
         )
-        if risposta == QMessageBox.No:
+        if risposta == _MB_No:
             print("[INFO] Download annullato dall'utente.")
             return
     else:
@@ -624,10 +628,10 @@ def esegui_download_e_caricamento(min_lat, min_lon, max_lat, max_lon, filter_geo
             f"Download annullato.\n\n"
             f"Sono state scaricate {len(all_features)} feature.\n"
             f"Vuoi caricarle comunque?",
-            QMessageBox.Yes | QMessageBox.No,
-            QMessageBox.Yes,
+            _MB_Yes | _MB_No,
+            _MB_Yes,
         )
-        if risposta == QMessageBox.No:
+        if risposta == _MB_No:
             return
 
     progress.close()
@@ -882,10 +886,10 @@ def esegui_download_e_caricamento(min_lat, min_lon, max_lat, max_lon, filter_geo
                 "Vuoi aggiungere comunque i dati (senza quei campi)?\n\n"
                 "Suggerimento: disattiva 'Espandi riferimento catastale' oppure "
                 "scegli 'nuovo layer' come destinazione.",
-                QMessageBox.Yes | QMessageBox.No,
-                QMessageBox.No,
+                _MB_Yes | _MB_No,
+                _MB_No,
             )
-            if risposta == QMessageBox.No:
+            if risposta == _MB_No:
                 return None
 
     # Copia feature con attributi di segnalazione
