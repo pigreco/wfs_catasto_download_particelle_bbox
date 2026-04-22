@@ -426,7 +426,9 @@ def scarica_singolo_tile(min_lat, min_lon, max_lat, max_lon):
 
         if not wfs_url.startswith("https://"):
             raise ValueError(f"Schema URL non permesso: {wfs_url}")
-        urllib.request.urlretrieve(wfs_url, tmp_path)  # noqa: S310
+        with urllib.request.urlopen(wfs_url) as resp:  # nosec B310
+            with open(tmp_path, "wb") as f:
+                f.write(resp.read())
 
         # Verifica errori nel contenuto
         with open(tmp_path, 'r', encoding='utf-8', errors='replace') as f:
