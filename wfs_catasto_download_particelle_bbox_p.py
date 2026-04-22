@@ -83,7 +83,8 @@ def _is_point_layer(layer):
 
 
 def _set_show_feature_count(tree_layer, value):
-    tree_layer.setShowFeatureCount(bool(value))
+    # setShowFeatureCount() rimosso in QGIS 4; usa la proprietà sottostante
+    tree_layer.setCustomProperty("showFeatureCount", 1 if value else 0)
 
 
 def _refresh_feature_counts_deferred(layer_id):
