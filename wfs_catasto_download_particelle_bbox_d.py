@@ -3,7 +3,7 @@ WFS Catasto Download Particelle BBox - Dialog
 ==============================================
 Interfaccia grafica per la scelta della modalità di selezione area.
 
-Compatibile con QGIS 3 (Qt5) e QGIS 4 (Qt6).
+Compatibile con QGIS 4 (Qt6/PyQt6).
 """
 
 import configparser
@@ -28,42 +28,22 @@ from qgis.PyQt.QtWidgets import (
     QMessageBox,
 )
 
-# Compatibilità Qt5 / Qt6 - enum scoped
-try:
-    _WinHelpHint = Qt.WindowType.WindowContextHelpButtonHint
-    _WinCloseHint = Qt.WindowType.WindowCloseButtonHint
-    _AlignCenter = Qt.AlignmentFlag.AlignCenter
-    _RichText = Qt.TextFormat.RichText
-except AttributeError:
-    _WinHelpHint = Qt.WindowContextHelpButtonHint
-    _WinCloseHint = Qt.WindowCloseButtonHint
-    _AlignCenter = Qt.AlignCenter
-    _RichText = Qt.RichText
+from qgis.core import Qgis
 
-try:
-    _KeepAspectRatio = Qt.AspectRatioMode.KeepAspectRatio
-    _SmoothTransformation = Qt.TransformationMode.SmoothTransformation
-except AttributeError:
-    _KeepAspectRatio = Qt.KeepAspectRatio
-    _SmoothTransformation = Qt.SmoothTransformation
+_WinHelpHint = Qt.WindowType.WindowContextHelpButtonHint
+_WinCloseHint = Qt.WindowType.WindowCloseButtonHint
+_AlignCenter = Qt.AlignmentFlag.AlignCenter
+_RichText = Qt.TextFormat.RichText
+_KeepAspectRatio = Qt.AspectRatioMode.KeepAspectRatio
+_SmoothTransformation = Qt.TransformationMode.SmoothTransformation
 
 
 def _is_point_layer(layer):
-    """Verifica se il layer è puntuale (compatibile Qt5/Qt6)."""
-    try:
-        from qgis.core import Qgis
-        return layer.geometryType() == Qgis.GeometryType.Point
-    except AttributeError:
-        return layer.geometryType() == 0
+    return layer.geometryType() == Qgis.GeometryType.Point
 
 
 def _is_polygon_layer(layer):
-    """Verifica se il layer è poligonale (compatibile Qt5/Qt6)."""
-    try:
-        from qgis.core import Qgis
-        return layer.geometryType() == Qgis.GeometryType.Polygon
-    except AttributeError:
-        return layer.geometryType() == 2
+    return layer.geometryType() == Qgis.GeometryType.Polygon
 
 
 def _plugin_version():
@@ -281,7 +261,7 @@ class SceltaModalitaDialog(QDialog):
 
         # Linea spessa sotto il titolo
         sep_title = QFrame()
-        sep_title.setFrameShape(QFrame.Shape.HLine if hasattr(QFrame, 'Shape') else QFrame.HLine)
+        sep_title.setFrameShape(QFrame.Shape.HLine)
         sep_title.setStyleSheet("border: none; border-top: 2px solid #aaa;")
         layout.addWidget(sep_title)
 
@@ -298,7 +278,7 @@ class SceltaModalitaDialog(QDialog):
 
         # --- Separatore ---
         sep = QFrame()
-        sep.setFrameShape(QFrame.Shape.HLine if hasattr(QFrame, 'Shape') else QFrame.HLine)
+        sep.setFrameShape(QFrame.Shape.HLine)
         sep.setStyleSheet("color: #ccc;")
         layout.addWidget(sep)
 
@@ -314,7 +294,7 @@ class SceltaModalitaDialog(QDialog):
 
         # --- Separatore ---
         sep2 = QFrame()
-        sep2.setFrameShape(QFrame.Shape.HLine if hasattr(QFrame, 'Shape') else QFrame.HLine)
+        sep2.setFrameShape(QFrame.Shape.HLine)
         sep2.setStyleSheet("color: #ccc;")
         layout.addWidget(sep2)
 
@@ -363,7 +343,7 @@ class SceltaModalitaDialog(QDialog):
     def _make_sep(self):
         """Crea una linea separatrice orizzontale."""
         sep = QFrame()
-        sep.setFrameShape(QFrame.Shape.HLine if hasattr(QFrame, 'Shape') else QFrame.HLine)
+        sep.setFrameShape(QFrame.Shape.HLine)
         sep.setStyleSheet("color: #ddd;")
         return sep
 
