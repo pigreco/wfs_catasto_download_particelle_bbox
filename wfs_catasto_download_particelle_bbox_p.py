@@ -4,7 +4,7 @@ WFS Catasto Download Particelle BBox - Plugin Logic
 Logica principale del plugin: classe plugin, map tools, download WFS,
 tiling, deduplicazione e filtro spaziale.
 
-Compatibile con QGIS 3 (Qt5) e QGIS 4 (Qt6).
+Compatibile con QGIS 4 (Qt6/PyQt6).
 
 Autore: Salvatore Fiandaca
 Email: pigrecoinfinito@gmail.com
@@ -37,7 +37,7 @@ from qgis.core import (
     QgsFillSymbol,
 )
 from qgis.gui import QgsMapTool, QgsRubberBand
-from qgis.PyQt.QtCore import Qt, QVariant, QTimer, QSettings
+from qgis.PyQt.QtCore import Qt, QMetaType, QTimer, QSettings
 from qgis.PyQt.QtGui import QColor, QIcon, QKeySequence
 from qgis.PyQt.QtWidgets import (
     QAction,
@@ -54,67 +54,37 @@ from .get_particella_wfs import get_particella_info
 
 
 # =============================================================================
-# COMPATIBILITÀ QGIS 3 / QGIS 4 (Qt5 / Qt6)
+# HELPERS QGIS 4 (Qt6/PyQt6)
 # =============================================================================
 
-# Tipo geometria per QgsRubberBand e controlli layer
-try:
-    _GEOM_POLYGON = Qgis.GeometryType.Polygon
-    _GEOM_LINE = Qgis.GeometryType.Line
-    _GEOM_POINT = Qgis.GeometryType.Point
-except AttributeError:
-    _GEOM_POLYGON = QgsWkbTypes.PolygonGeometry
-    _GEOM_LINE = QgsWkbTypes.LineGeometry
-    _GEOM_POINT = QgsWkbTypes.PointGeometry
+_GEOM_POLYGON = Qgis.GeometryType.Polygon
+_GEOM_LINE = Qgis.GeometryType.Line
+_GEOM_POINT = Qgis.GeometryType.Point
 
 
 def _exec_dialog(dialog):
-    """Esegue un dialog in modo compatibile con Qt5 e Qt6."""
-    try:
-        return dialog.exec()
-    except AttributeError:
-        return dialog.exec_()
+    return dialog.exec()
 
 
 def _wkb_display_string(wkb_type):
-    """Restituisce il nome del tipo WKB, compatibile QGIS 3/4."""
-    try:
-        return QgsWkbTypes.displayString(wkb_type)
-    except AttributeError:
-        return str(wkb_type)
+    return QgsWkbTypes.displayString(wkb_type)
 
 
 def _is_polygon_layer(layer):
-    """Verifica se il layer è poligonale (compatibile QGIS 3/4)."""
-    try:
-        return layer.geometryType() == Qgis.GeometryType.Polygon
-    except AttributeError:
-        return layer.geometryType() == 2
+    return layer.geometryType() == Qgis.GeometryType.Polygon
 
 
 def _is_line_layer(layer):
-    """Verifica se il layer è lineare (compatibile QGIS 3/4)."""
-    try:
-        return layer.geometryType() == Qgis.GeometryType.Line
-    except AttributeError:
-        return layer.geometryType() == 1
+    return layer.geometryType() == Qgis.GeometryType.Line
 
 
 def _is_point_layer(layer):
-    """Verifica se il layer è puntuale (compatibile QGIS 3/4)."""
-    try:
-        return layer.geometryType() == Qgis.GeometryType.Point
-    except AttributeError:
-        return layer.geometryType() == 0
+    return layer.geometryType() == Qgis.GeometryType.Point
 
 
 def _set_show_feature_count(tree_layer, value):
-    """Imposta showFeatureCount compatibile con QGIS 3 (Qt5) e QGIS 4 (Qt6)."""
-    try:
-        tree_layer.setShowFeatureCount(bool(value))  # QGIS 3.32+ / QGIS 4 (Qt6)
-    except AttributeError:
-        # Fallback QGIS < 3.32: usa int (1/0) per compatibilità QVariant Qt6
-        tree_layer.setCustomProperty("showFeatureCount", 1 if value else 0)
+    # setShowFeatureCount() rimosso in QGIS 4; usa la proprietà sottostante
+    tree_layer.setCustomProperty("showFeatureCount", 1 if value else 0)
 
 
 def _refresh_feature_counts_deferred(layer_id):
@@ -182,25 +152,14 @@ def _applica_stile_particelle(layer):
     layer.setRenderer(renderer)
 
 
-# Qt enum scoped (Qt6) vs flat (Qt5)
-try:
-    _WindowModal = Qt.WindowModality.WindowModal
-    _DashLine = Qt.PenStyle.DashLine
-    _DialogAccepted = QDialog.DialogCode.Accepted
-    _Key_Escape = Qt.Key.Key_Escape
-    _LeftButton = Qt.MouseButton.LeftButton
-    _RightButton = Qt.MouseButton.RightButton
-    _MB_Yes = QMessageBox.StandardButton.Yes
-    _MB_No = QMessageBox.StandardButton.No
-except AttributeError:
-    _WindowModal = Qt.WindowModal
-    _DashLine = Qt.DashLine
-    _DialogAccepted = QDialog.Accepted
-    _Key_Escape = Qt.Key_Escape
-    _LeftButton = Qt.LeftButton
-    _RightButton = Qt.RightButton
-    _MB_Yes = QMessageBox.Yes
-    _MB_No = QMessageBox.No
+_WindowModal = Qt.WindowModality.WindowModal
+_DashLine = Qt.PenStyle.DashLine
+_DialogAccepted = QDialog.DialogCode.Accepted
+_Key_Escape = Qt.Key.Key_Escape
+_LeftButton = Qt.MouseButton.LeftButton
+_RightButton = Qt.MouseButton.RightButton
+_MB_Yes = QMessageBox.StandardButton.Yes
+_MB_No = QMessageBox.StandardButton.No
 
 
 # =============================================================================
@@ -859,13 +818,13 @@ def esegui_download_e_caricamento(min_lat, min_lon, max_lat, max_lon, filter_geo
 
         # Copia campi originali + aggiungi campi segnalazione duplicati
         original_fields = layer_info["fields"].toList()
-        original_fields.append(QgsField("geom_duplicata", QVariant.String))
-        original_fields.append(QgsField("gruppo_duplicato", QVariant.Int))
+        original_fields.append(QgsField("geom_duplicata", QMetaType.Type.QString))
+        original_fields.append(QgsField("gruppo_duplicato", QMetaType.Type.Int))
         if espandi_catastale:
-            original_fields.append(QgsField("sezione", QVariant.String))
-            original_fields.append(QgsField("foglio", QVariant.Int))
-            original_fields.append(QgsField("allegato", QVariant.String))
-            original_fields.append(QgsField("sviluppo", QVariant.String))
+            original_fields.append(QgsField("sezione", QMetaType.Type.QString))
+            original_fields.append(QgsField("foglio", QMetaType.Type.Int))
+            original_fields.append(QgsField("allegato", QMetaType.Type.QString))
+            original_fields.append(QgsField("sviluppo", QMetaType.Type.QString))
         mem_provider.addAttributes(original_fields)
         mem_layer.updateFields()
 
@@ -2160,10 +2119,7 @@ class WfsCatastoDownloadParticelleBbox:
         """Mostra il dialog con le informazioni sul plugin."""
         about_dlg = AboutDialog(self.iface.mainWindow())
         # Compatibilità Qt5/Qt6
-        try:
-            about_dlg.exec()  # Qt6
-        except AttributeError:
-            about_dlg.exec_()  # Qt5
+        about_dlg.exec()
             
     def show_help(self):
         """Apre la pagina di aiuto del plugin su GitHub Pages."""

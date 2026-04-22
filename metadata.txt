@@ -4,9 +4,10 @@
 
 [general]
 name=WFS Catasto Download Particelle BBox
-qgisMinimumVersion=3.0
+qgisMinimumVersion=3.34
+qgisMaximumVersion=4.99
 description=Download particelle catastali dal WFS dell'Agenzia delle Entrate tramite BBox, selezione poligono, linea con buffer o layer di punti.
-version=1.5.2
+version=1.6.1
 author=Salvatore Fiandaca
 email=pigrecoinfinito@gmail.com
 
@@ -17,7 +18,7 @@ about=WFS Catasto Download Particelle BBox - Plugin per QGIS che consente di sca
     3) Seleziona Linea: clicca su una linea e crea un buffer personalizzabile (0-100m) per scaricare le particelle che lo intersecano.
     4) Seleziona Punti: clicca su un layer di punti (o direttamente in mappa) per scaricare le particelle che contengono i punti. Supporta selezione parziale e auto-riproiezione UTM per CRS geografici.
     Opzione "Espandi riferimento catastale": estrae dal campo NATIONALCADASTRALREFERENCE i campi sezione, foglio, allegato e sviluppo (formato CCCCZFFFFAS).
-    Supporta download multi-tile con progress bar, deduplicazione feature e filtro spaziale. Compatibile con QGIS 3 (Qt5) e QGIS 4 (Qt6).
+    Supporta download multi-tile con progress bar, deduplicazione feature e filtro spaziale. Compatibile con QGIS 4 (Qt6/PyQt6).
     ---
     EN: A QGIS plugin for downloading cadastral parcels from the Italian Revenue Agency (Agenzia delle Entrate) WFS INSPIRE service. Three selection modes: draw BBox, select polygon, select line with customizable buffer (0-100m). Optional expansion of NATIONALCADASTRALREFERENCE into section, sheet, attachment and development fields. Supports multi-tile download with progress bar, feature deduplication and spatial filtering.
     DISCLAIMER: Please use this plugin responsibly. Massive or repeated downloads may overload the WFS service of the Italian Revenue Agency, causing disruptions for all users.
@@ -30,6 +31,16 @@ repository=https://github.com/pigreco/wfs_catasto_download_particelle_bbox
 
 hasProcessingProvider=no
 changelog=
+    1.6.1 - Fix QGIS 4.0.1: QgsLayerTreeLayer.setShowFeatureCount() rimosso
+            in QGIS 4 - sostituito con setCustomProperty("showFeatureCount",
+            1/0) che e' il meccanismo sottostante compatibile con tutte le
+            versioni.
+    1.6.0 - Porting QGIS 4 / Qt6 / PyQt6: rimossi tutti i blocchi try/except di
+            compatibilita' Qt5. Enum scoped Qt6 usati direttamente
+            (Qt.WindowModality.WindowModal, Qt.PenStyle.DashLine, ecc.).
+            QVariant.String/Int sostituiti con QMetaType.Type.QString/Int
+            per QgsField. QgsMinimumVersion aggiornato a 3.34,
+            qgisMaximumVersion=4.99 aggiunto.
     1.5.2 - Fix: icona SVG - rimosso pattern16 non risolto che causava warning Qt6
             "Could not resolve property: #pattern16".
             Fix: GUI - rimossi colori testo hardcoded (#000, #333, #555) dai label
