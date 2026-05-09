@@ -430,7 +430,8 @@ def esegui_download_e_caricamento(min_lat, min_lon, max_lat, max_lon, filter_geo
                                   espandi_catastale=False,
                                   post_filter_points=None,
                                   carica_wms=False,
-                                  append_to_layer=None):
+                                  append_to_layer=None,
+                                  line_geom_wfs=None):
     """
     Gestisce il download WFS: singolo o multi-tile con progress bar.
 
@@ -771,6 +772,31 @@ def esegui_download_e_caricamento(min_lat, min_lon, max_lat, max_lon, filter_geo
     # Tutte le feature vengono mantenute
     unique_features = dopo_dedup_id
 
+    # --- FASE 4: Calcolo progressive lungo la linea (solo modalità Linea) ---
+    progr_map = {}  # feat_index → valore intero progressiva
+    if line_geom_wfs is not None and unique_features:
+        print("\n--- Calcolo progressive lungo la linea ---")
+        distanze = []
+        for i, feat in enumerate(unique_features):
+            geom_part = feat.geometry()
+            intersezione = line_geom_wfs.intersection(geom_part)
+            vertici = [v for v in intersezione.vertices()]
+            if vertici:
+                dist_min = min(
+                    line_geom_wfs.lineLocatePoint(
+                        QgsGeometry.fromPointXY(QgsPointXY(v.x(), v.y()))
+                    )
+                    for v in vertici
+                )
+            else:
+                dist_min = line_geom_wfs.lineLocatePoint(geom_part.centroid())
+            distanze.append((dist_min, i))
+        distanze.sort(key=lambda x: x[0])
+        for progr_val, (_, feat_idx) in enumerate(distanze, start=1):
+            progr_map[feat_idx] = progr_val
+        print(f"    Progressive calcolate su {len(distanze)} particelle")
+        print(f"    Dist ingresso (prime 5): {[round(d, 6) for d, _ in distanze[:5]]}")
+
     # --- Modalità append o creazione nuovo layer ---
     is_append = (append_to_layer is not None
                  and append_to_layer.isValid()
@@ -825,12 +851,15 @@ def esegui_download_e_caricamento(min_lat, min_lon, max_lat, max_lon, filter_geo
             original_fields.append(QgsField("foglio", QMetaType.Type.Int))
             original_fields.append(QgsField("allegato", QMetaType.Type.QString))
             original_fields.append(QgsField("sviluppo", QMetaType.Type.QString))
+        if line_geom_wfs is not None:
+            original_fields.append(QgsField("progr", QMetaType.Type.Int))
         mem_provider.addAttributes(original_fields)
         mem_layer.updateFields()
 
     # Indici dei nuovi campi
     idx_geom_dup = mem_layer.fields().indexOf("geom_duplicata")
     idx_gruppo_dup = mem_layer.fields().indexOf("gruppo_duplicato")
+    idx_progr = mem_layer.fields().indexOf("progr")
     if espandi_catastale:
         idx_sezione = mem_layer.fields().indexOf("sezione")
         idx_foglio = mem_layer.fields().indexOf("foglio")
@@ -890,6 +919,9 @@ def esegui_download_e_caricamento(min_lat, min_lon, max_lat, max_lon, filter_geo
                         new_feat.setAttribute(idx_allegato, codice[9])
                     if idx_sviluppo >= 0:
                         new_feat.setAttribute(idx_sviluppo, codice[10])
+
+        if idx_progr >= 0:
+            new_feat.setAttribute(idx_progr, progr_map.get(i))
 
         new_features.append(new_feat)
 
@@ -1306,7 +1338,7 @@ class LineSelectTool(QgsMapTool):
         print(f"\n[CRS] CRS del layer sorgente: {geom_crs.authid()}")
         min_lat, min_lon, max_lat, max_lon = trasforma_bbox_a_wfs(bbox, geom_crs)
 
-        # Trasforma il buffer nel CRS WFS per il filtering
+        # Trasforma il buffer e la linea nel CRS WFS per il filtering
         wfs_crs = QgsCoordinateReferenceSystem(WFS_CRS_ID)
         if geom_crs.authid() != wfs_crs.authid():
             transform_to_wfs = QgsCoordinateTransform(
@@ -1314,10 +1346,13 @@ class LineSelectTool(QgsMapTool):
             )
             buffer_geom_wfs = QgsGeometry(buffer_geom)
             buffer_geom_wfs.transform(transform_to_wfs)
+            line_geom_wfs = QgsGeometry(line_geom)
+            line_geom_wfs.transform(transform_to_wfs)
         else:
             buffer_geom_wfs = buffer_geom
+            line_geom_wfs = QgsGeometry(line_geom)
 
-        # Esegui download con filtro buffer
+        # Esegui download con filtro buffer e calcolo progressive
         esegui_download_e_caricamento(
             min_lat, min_lon, max_lat, max_lon,
             filter_geom=buffer_geom_wfs,
@@ -1325,6 +1360,7 @@ class LineSelectTool(QgsMapTool):
             espandi_catastale=self.espandi_catastale,
             carica_wms=self.carica_wms,
             append_to_layer=self.append_to_layer,
+            line_geom_wfs=line_geom_wfs,
         )
 
         qgis_iface.actionPan().trigger()
