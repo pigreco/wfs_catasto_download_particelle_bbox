@@ -773,6 +773,8 @@ def esegui_download_e_caricamento(min_lat, min_lon, max_lat, max_lon, filter_geo
     unique_features = dopo_dedup_id
 
     # --- FASE 4: Calcolo progressive lungo la linea (solo modalità Linea) ---
+    # progr è assegnato solo alle particelle che intersecano la linea stessa
+    # (non tutte quelle nel buffer); le altre restano NULL.
     progr_map = {}  # feat_index → valore intero progressiva
     if line_geom_wfs is not None and unique_features:
         print("\n--- Calcolo progressive lungo la linea ---")
@@ -781,20 +783,22 @@ def esegui_download_e_caricamento(min_lat, min_lon, max_lat, max_lon, filter_geo
             geom_part = feat.geometry()
             intersezione = line_geom_wfs.intersection(geom_part)
             vertici = [v for v in intersezione.vertices()]
-            if vertici:
-                dist_min = min(
-                    line_geom_wfs.lineLocatePoint(
-                        QgsGeometry.fromPointXY(QgsPointXY(v.x(), v.y()))
-                    )
-                    for v in vertici
+            if not vertici:
+                continue  # non interseca la linea → progr = NULL
+            dist_min = min(
+                line_geom_wfs.lineLocatePoint(
+                    QgsGeometry.fromPointXY(QgsPointXY(v.x(), v.y()))
                 )
-            else:
-                dist_min = line_geom_wfs.lineLocatePoint(geom_part.centroid())
+                for v in vertici
+            )
             distanze.append((dist_min, i))
         distanze.sort(key=lambda x: x[0])
         for progr_val, (_, feat_idx) in enumerate(distanze, start=1):
             progr_map[feat_idx] = progr_val
-        print(f"    Progressive calcolate su {len(distanze)} particelle")
+        n_no_intersect = len(unique_features) - len(distanze)
+        print(f"    Intersecano la linea: {len(distanze)} particelle")
+        if n_no_intersect:
+            print(f"    Solo nel buffer (progr=NULL): {n_no_intersect}")
         print(f"    Dist ingresso (prime 5): {[round(d, 6) for d, _ in distanze[:5]]}")
 
     # --- Modalità append o creazione nuovo layer ---
