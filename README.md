@@ -1,6 +1,6 @@
 # WFS Catasto Download Particelle BBox
 
-[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://github.com/pigreco/wfs_catasto_download_particelle_bbox)
+[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/pigreco/wfs_catasto_download_particelle_bbox)
 
 Plugin per QGIS che consente di scaricare le particelle catastali dal servizio WFS dell'[Agenzia delle Entrate](https://www.agenziaentrate.gov.it/portale/cartografia-catastale-wfs) (INSPIRE) disponibile con licenza [CC-BY 4.0](https://creativecommons.org/licenses/by/4.0/deed.it).
 
